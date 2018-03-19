@@ -111,4 +111,8 @@ end
 function script_load(settings)
 	script_log("load")
 	--dump_obs()
+	local output = obs.obs_get_output_by_name("simple_stream")
+	local frames = obs.obs_output_get_total_frames(output)
+	local dropped = obs.obs_output_get_frames_dropped(output)
+	script_log("- " .. dropped .. "/" .. frames)
 end
