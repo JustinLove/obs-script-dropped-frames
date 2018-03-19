@@ -8,6 +8,16 @@ local sample_seconds = 60
 local alarm_level = 20
 local alarm_source = ""
 
+function update_frames()
+	local output = obs.obs_get_output_by_name("simple_stream")
+	if output ~= nil then
+		local frames = obs.obs_output_get_total_frames(output)
+		local dropped = obs.obs_output_get_frames_dropped(output)
+		obs.obs_output_release(output)
+		script_log(dropped .. "/" .. frames)
+	end
+end
+
 function sample_modified(props, p, settings)
 	return false -- text controls refreshing properties reset focus on each character
 end
@@ -111,8 +121,10 @@ end
 function script_load(settings)
 	script_log("load")
 	--dump_obs()
-	local output = obs.obs_get_output_by_name("simple_stream")
-	local frames = obs.obs_output_get_total_frames(output)
-	local dropped = obs.obs_output_get_frames_dropped(output)
-	script_log("- " .. dropped .. "/" .. frames)
+	obs.timer_add(update_frames, 2000)
+end
+
+function script_unload()
+	-- this crashes OBS
+	--obs.timer_remove(update_frames)
 end
