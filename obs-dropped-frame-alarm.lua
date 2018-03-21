@@ -4,9 +4,14 @@ function script_log(message)
 	obs.script_log(obs.LOG_INFO, message)
 end
 
+local sample_rate = 2000
+
 local sample_seconds = 60
-local alarm_level = 20
+local alarm_level = 0.2
 local alarm_source = ""
+
+local frame_history = {}
+local alarm_active = false
 
 function update_frames()
 	local output = obs.obs_get_output_by_name("simple_stream")
@@ -15,6 +20,40 @@ function update_frames()
 		local dropped = obs.obs_output_get_frames_dropped(output)
 		obs.obs_output_release(output)
 		--script_log(dropped .. "/" .. frames)
+
+		table.insert(frame_history, 1,
+			{frames = frames, dropped = dropped})
+		local sample_size = (sample_seconds * 1000 / sample_rate) + 1
+		-- + 1 so that we get n differences
+		while #frame_history > sample_size do
+			table.remove(frame_history)
+		end
+
+		check_alarm()
+	end
+end
+
+function check_alarm()
+	if #frame_history < 2 then
+		return
+	end
+	local newest = frame_history[1]
+	local oldest = frame_history[#frame_history]
+	local frames = newest.frames - oldest.frames
+	local dropped = newest.dropped - oldest.dropped
+	local rate = dropped/frames
+	--script_log(dropped .. "/" .. frames .. " " .. rate)
+	if rate > alarm_level then
+		if not alarm_active then
+			play_alarm()
+			alarm_active = true
+			obs.timer_add(play_alarm, 60*1000)
+		end
+	else
+		if alarm_active then
+			alarm_active = false
+			obs.timer_remove(play_alarm)
+		end
 	end
 end
 
@@ -128,7 +167,7 @@ function script_update(settings)
 	my_settings = settings
 
 	sample_seconds = obs.obs_data_get_int(settings, "sample_seconds")
-	alarm_level = obs.obs_data_get_int(settings, "alarm_level")
+	alarm_level = 100 * obs.obs_data_get_int(settings, "alarm_level")
 	alarm_source = obs.obs_data_get_string(settings, "alarm_source")
 end
 
@@ -136,7 +175,7 @@ end
 function script_load(settings)
 	script_log("load")
 	--dump_obs()
-	obs.timer_add(update_frames, 2000)
+	obs.timer_add(update_frames, sample_rate)
 end
 
 function script_unload()
