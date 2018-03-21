@@ -1,4 +1,5 @@
 obs = obslua
+bit = require("bit")
 
 function script_log(message)
 	obs.script_log(obs.LOG_INFO, message)
@@ -182,3 +183,40 @@ function script_unload()
 	-- this crashes OBS
 	--obs.timer_remove(update_frames)
 end
+
+source_def = {}
+source_def.id = "lua_dropped_frame_graph_source"
+source_def.output_flags = bit.bor(obs.OBS_SOURCE_VIDEO, obs.OBS_SOURCE_CUSTOM_DRAW)
+
+source_def.get_name = function()
+	return "Dropped Frame Graph"
+end
+
+source_def.create = function(source, settings)
+	local data = {}
+
+	return data
+end
+
+source_def.destroy = function(data)
+end
+
+source_def.video_render = function(data, effect)
+	effect = obs.obs_get_base_effect(obs.OBS_EFFECT_DEFAULT)
+
+	obs.gs_blend_state_push()
+	obs.gs_reset_blend_state()
+
+
+	obs.gs_blend_state_pop()
+end
+
+source_def.get_width = function(data)
+	return 500
+end
+
+source_def.get_height = function(data)
+	return 500
+end
+
+obs.obs_register_source(source_def)
