@@ -194,19 +194,68 @@ end
 
 source_def.create = function(source, settings)
 	local data = {}
+	obs.obs_enter_graphics()
+	obs.gs_render_start(true);
+	obs.gs_vertex2f(0.001, 0.001);
+	obs.gs_vertex2f(0.001, 0.997);
+	obs.gs_vertex2f(0.997, 0.997);
+	obs.gs_vertex2f(0.997, 0.001);
+	obs.gs_vertex2f(0.001, 0.001);
+	data.outer_box = obs.gs_render_save();
+	obs.obs_leave_graphics()
 
 	return data
 end
 
 source_def.destroy = function(data)
+	obs.obs_enter_graphics()
+	obs.gs_vertexbuffer_destroy(data.outer_box)
+	obs.obs_leave_graphics()
 end
 
 source_def.video_render = function(data, effect)
-	effect = obs.obs_get_base_effect(obs.OBS_EFFECT_DEFAULT)
+	if not data.outer_box then
+		script_log("no vertex buffer")
+		return
+	end
 
 	obs.gs_blend_state_push()
 	obs.gs_reset_blend_state()
 
+	local effect_solid = obs.obs_get_base_effect(obs.OBS_EFFECT_SOLID)
+	local color_param = obs.gs_effect_get_param_by_name(effect_solid, "color");
+
+	obs.gs_effect_set_color(color_param, 0xff444444)
+
+	while obs.gs_effect_loop(effect_solid, "Solid") do
+		obs.gs_draw_sprite(nil, 0, 500, 500)
+	end
+
+	obs.gs_effect_set_color(color_param, 0xffffffff)
+
+	obs.gs_load_vertexbuffer(data.outer_box)
+
+	obs.gs_matrix_push()
+	obs.gs_matrix_translate3f(50, 50, 0)
+	obs.gs_matrix_scale3f(400, 400, 0)
+
+
+	while obs.gs_effect_loop(effect_solid, "Solid") do
+		obs.gs_draw(obs.GS_LINESTRIP, 0, 0)
+	end
+
+	obs.gs_matrix_pop()
+
+	obs.gs_render_start(true)
+	obs.gs_vertex2f(100, 100)
+	obs.gs_vertex2f(100, 400)
+	obs.gs_vertex2f(400, 400)
+	obs.gs_vertex2f(400, 100)
+	obs.gs_vertex2f(100, 100)
+
+	while obs.gs_effect_loop(effect_solid, "Solid") do
+		obs.gs_render_stop(obs.GS_LINESTRIP)
+	end
 
 	obs.gs_blend_state_pop()
 end
