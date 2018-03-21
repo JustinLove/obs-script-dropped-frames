@@ -14,7 +14,29 @@ function update_frames()
 		local frames = obs.obs_output_get_total_frames(output)
 		local dropped = obs.obs_output_get_frames_dropped(output)
 		obs.obs_output_release(output)
-		script_log(dropped .. "/" .. frames)
+		--script_log(dropped .. "/" .. frames)
+	end
+end
+
+function activate_alarm()
+	set_alarm_visible(true)
+	obs.remove_current_callback()
+end
+
+function play_alarm()
+	set_alarm_visible(false)
+	obs.timer_add(activate_alarm, 500)
+end
+
+function set_alarm_visible(visible)
+	if alarm_source ~= nil then
+		local current_source = obs.obs_frontend_get_current_scene()
+		local current_scene = obs.obs_scene_from_source(current_source)
+		obs.obs_source_release(current_source)
+		local item = obs.obs_scene_find_source(current_scene, alarm_source)
+		if item ~= nil then
+			obs.obs_sceneitem_set_visible(item, visible)
+		end
 	end
 end
 
@@ -26,15 +48,8 @@ function alarm_modified(props, p, settings)
 	return false -- text controls refreshing properties reset focus on each character
 end
 
-function refresh(props, p, set)
-	if alarm_source ~= nil then
-		local current_source = obs.obs_frontend_get_current_scene()
-		local current_scene = obs.obs_scene_from_source(current_source)
-		local item = obs.obs_scene_find_source(current_scene, alarm_source)
-		if item ~= nil then
-			obs.obs_sceneitem_set_visible(item, true)
-		end
-	end
+function test_alarm(props, p, set)
+	play_alarm()
 	return true
 end
 
@@ -91,7 +106,7 @@ function script_properties()
 	end
 	obs.source_list_release(sources)
 
-	local ref = obs.obs_properties_add_button(props, "refresh", "Refresh", refresh)
+	local ref = obs.obs_properties_add_button(props, "test_alarm", "Test Alarm", test_alarm)
 	obs.obs_property_set_long_description(ref, "Updated calculated fields with changes from text controls.")
 
 	return props
