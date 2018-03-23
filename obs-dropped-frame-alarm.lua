@@ -6,6 +6,9 @@ function script_log(message)
 end
 
 local sample_rate = 2000
+local graph_width = 600
+local graph_height = 200
+local graph_margin = 10
 
 local sample_seconds = 60
 local alarm_level = 0.2
@@ -228,44 +231,42 @@ source_def.video_render = function(data, effect)
 	obs.gs_effect_set_color(color_param, 0xff444444)
 
 	while obs.gs_effect_loop(effect_solid, "Solid") do
-		obs.gs_draw_sprite(nil, 0, 500, 500)
+		obs.gs_draw_sprite(nil, 0, graph_width, graph_height)
 	end
 
-	obs.gs_effect_set_color(color_param, 0xffffffff)
+	obs.gs_matrix_push()
+	obs.gs_matrix_translate3f(graph_margin, graph_margin, 0)
+	obs.gs_matrix_scale3f(graph_width - graph_margin*2, graph_height - graph_margin*2, 1)
 
 	obs.gs_load_vertexbuffer(data.outer_box)
-
-	obs.gs_matrix_push()
-	obs.gs_matrix_translate3f(50, 50, 0)
-	obs.gs_matrix_scale3f(400, 400, 0)
-
-
+	obs.gs_effect_set_color(color_param, 0xffffffff)
 	while obs.gs_effect_loop(effect_solid, "Solid") do
 		obs.gs_draw(obs.GS_LINESTRIP, 0, 0)
 	end
 
-	obs.gs_matrix_pop()
 
 	obs.gs_render_start(true)
-	obs.gs_vertex2f(100, 100)
-	obs.gs_vertex2f(100, 400)
-	obs.gs_vertex2f(400, 400)
-	obs.gs_vertex2f(400, 100)
-	obs.gs_vertex2f(100, 100)
+	obs.gs_vertex2f(0.1, 0.1)
+	obs.gs_vertex2f(0.1, 0.9)
+	obs.gs_vertex2f(0.9, 0.9)
+	obs.gs_vertex2f(0.9, 0.1)
+	obs.gs_vertex2f(0.1, 0.1)
 
 	while obs.gs_effect_loop(effect_solid, "Solid") do
 		obs.gs_render_stop(obs.GS_LINESTRIP)
 	end
 
+	obs.gs_matrix_pop()
+
 	obs.gs_blend_state_pop()
 end
 
 source_def.get_width = function(data)
-	return 500
+	return graph_width
 end
 
 source_def.get_height = function(data)
-	return 500
+	return graph_height
 end
 
 obs.obs_register_source(source_def)
