@@ -103,6 +103,32 @@ function set_alarm_visible(visible)
 	end
 end
 
+function output_stop(calldata)
+	set_alarm_visible(false)
+end
+
+function hook_output()
+	local output = obs.obs_get_output_by_name(output_mode)
+	if output ~= nil then
+		local handler = obs_output_get_signal_handler(output)
+		if handler ~= nil then
+			obs.signal_handler_connect(handler, "stop", output_stop)
+		end
+		obs.obs_output_release(output)
+	end
+end
+
+function unhook_output()
+	local output = obs.obs_get_output_by_name(output_mode)
+	if output ~= nil then
+		local handler = obs_output_get_signal_handler(output)
+		if handler ~= nil then
+			obs.signal_handler_disconnect(handler, "stop", output_stop)
+		end
+		obs.obs_output_release(output)
+	end
+end
+
 function extract_series(table, attribute)
 	local series = {}
 	for i = 1,#table-1 do
@@ -207,7 +233,16 @@ function script_update(settings)
 	my_settings = settings
 
 	mode = obs.obs_data_get_string(settings, "mode")
-	output_mode = obs.obs_data_get_string(settings, "output_mode")
+
+	local new_output_mode = obs.obs_data_get_string(settings, "output_mode")
+	if new_output_mode ~= output_mode then
+		unhook_output()
+		output_mode = new_output_mode
+		hook_output()
+	else
+		output_mode = new_output_mode
+	end
+
 	sample_seconds = obs.obs_data_get_int(settings, "sample_seconds")
 	alarm_level = obs.obs_data_get_int(settings, "alarm_level") / 100
 	alarm_source = obs.obs_data_get_string(settings, "alarm_source")
@@ -222,26 +257,12 @@ function script_load(settings)
 	script_log("load")
 	--dump_obs()
 	obs.timer_add(update_frames, sample_rate)
-	local output = obs.obs_get_output_by_name(output_mode)
-	if output ~= nil then
-		local handler = obs_output_get_signal_handler(output)
-		if handler ~= nil then
-			obs.signal_handler_connect(handler, "stop", output_stop)
-		end
-		obs.obs_output_release(output)
-	end
+	hook_output()
 end
 
 function script_unload()
 	set_alarm_visible(false)
-	local output = obs.obs_get_output_by_name(output_mode)
-	if output ~= nil then
-		local handler = obs_output_get_signal_handler(output)
-		if handler ~= nil then
-			obs.signal_handler_disconnect(handler, "stop", output_stop)
-		end
-		obs.obs_output_release(output)
-	end
+	unhook_output()
 	-- this crashes OBS
 	--obs.timer_remove(update_frames)
 end
