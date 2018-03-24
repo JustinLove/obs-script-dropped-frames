@@ -216,14 +216,35 @@ function script_update(settings)
 	mode = obs.obs_data_get_string(settings, "mode")
 end
 
+function output_stop(calldata)
+	set_alarm_visible(false)
+end
+
 -- a function named script_load will be called on startup
 function script_load(settings)
 	script_log("load")
 	--dump_obs()
 	obs.timer_add(update_frames, sample_rate)
+	local output = obs.obs_get_output_by_name("simple_stream")
+	if output ~= nil then
+		local handler = obs_output_get_signal_handler(output)
+		if handler ~= nil then
+			obs.signal_handler_connect(handler, "stop", output_stop)
+		end
+		obs.obs_output_release(output)
+	end
 end
 
 function script_unload()
+	set_alarm_visible(false)
+	local output = obs.obs_get_output_by_name("simple_stream")
+	if output ~= nil then
+		local handler = obs_output_get_signal_handler(output)
+		if handler ~= nil then
+			obs.signal_handler_disconnect(handler, "stop", output_stop)
+		end
+		obs.obs_output_release(output)
+	end
 	-- this crashes OBS
 	--obs.timer_remove(update_frames)
 end
