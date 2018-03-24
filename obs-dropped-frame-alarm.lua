@@ -5,7 +5,7 @@ function script_log(message)
 	obs.script_log(obs.LOG_INFO, message)
 end
 
-local sample_rate = 2000
+local sample_rate = 1000
 local graph_width = 600
 local graph_height = 200
 local graph_margin = 10
@@ -17,24 +17,36 @@ local alarm_source = ""
 local frame_history = {}
 local alarm_active = false
 
+local fake_frames = 0
+local fake_dropped = 0
+
 function update_frames()
-	local output = obs.obs_get_output_by_name("simple_stream")
+	local output = nil --obs.obs_get_output_by_name("simple_stream")
+	local frames = 0
+	local dropped = 0
 	if output ~= nil then
-		local frames = obs.obs_output_get_total_frames(output)
-		local dropped = obs.obs_output_get_frames_dropped(output)
+		frames = obs.obs_output_get_total_frames(output)
+		dropped = obs.obs_output_get_frames_dropped(output)
 		obs.obs_output_release(output)
-		--script_log(dropped .. "/" .. frames)
-
-		table.insert(frame_history, 1,
-			{frames = frames, dropped = dropped})
-		local sample_size = (sample_seconds * 1000 / sample_rate) + 1
-		-- + 1 so that we get n differences
-		while #frame_history > sample_size do
-			table.remove(frame_history)
-		end
-
-		check_alarm()
+	else
+		fake_frames = fake_frames + math.random(19,21)
+		frames = fake_frames
+		fake_dropped = fake_dropped + math.random(0, 20)
+		dropped = fake_dropped
 	end
+
+	--script_log(dropped .. "/" .. frames)
+
+	table.insert(frame_history, 1,
+		{frames = frames, dropped = dropped})
+
+	local sample_size = (sample_seconds * 1000 / sample_rate) + 1
+	-- + 1 so that we get n differences
+	while #frame_history > sample_size do
+		table.remove(frame_history)
+	end
+
+	check_alarm()
 end
 
 function check_alarm()
@@ -45,6 +57,9 @@ function check_alarm()
 	local oldest = frame_history[#frame_history]
 	local frames = newest.frames - oldest.frames
 	local dropped = newest.dropped - oldest.dropped
+	if frames < 1 then
+		return
+	end
 	local rate = dropped/frames
 	--script_log(dropped .. "/" .. frames .. " " .. rate)
 	if rate > alarm_level then
@@ -81,6 +96,22 @@ function set_alarm_visible(visible)
 			obs.obs_sceneitem_set_visible(item, visible)
 		end
 	end
+end
+
+function extract_series(table, attribute)
+	local series = {}
+	for i = 1,#table-1 do
+		series[i] = table[i][attribute] - table[i+1][attribute]
+	end
+	return series
+end
+
+function table_max(table)
+	local best = table[1] or 0
+	for _,v in ipairs(table) do
+		best = math.max(best, v)
+	end
+	return best
 end
 
 function sample_modified(props, p, settings)
@@ -216,7 +247,7 @@ source_def.destroy = function(data)
 	obs.obs_leave_graphics()
 end
 
-local function fill(color)
+function fill(color)
 	local effect_solid = obs.obs_get_base_effect(obs.OBS_EFFECT_SOLID)
 	local color_param = obs.gs_effect_get_param_by_name(effect_solid, "color");
 
@@ -227,7 +258,7 @@ local function fill(color)
 	end
 end
 
-local function stroke(color)
+function stroke(color)
 	local effect_solid = obs.obs_get_base_effect(obs.OBS_EFFECT_SOLID)
 	local color_param = obs.gs_effect_get_param_by_name(effect_solid, "color");
 
@@ -259,19 +290,45 @@ source_def.video_render = function(data, effect)
 	obs.gs_matrix_push()
 	obs.gs_matrix_translate3f(graph_margin, graph_margin, 0)
 	obs.gs_matrix_scale3f(graph_width - graph_margin*2, graph_height - graph_margin*2, 1)
+	obs.gs_matrix_translate3f(0, 1, 0)
+	obs.gs_matrix_scale3f(1, -1, 1)
 
-	obs.gs_load_vertexbuffer(data.outer_box)
-	stroke(0xffffffff)
+	--obs.gs_load_vertexbuffer(data.outer_box)
+	--stroke(0xffffffff)
 
-	obs.gs_render_start(true)
-	obs.gs_vertex2f(0.1, 0.1)
-	obs.gs_vertex2f(0.1, 0.9)
-	obs.gs_vertex2f(0.9, 0.9)
-	obs.gs_vertex2f(0.9, 0.1)
-	obs.gs_vertex2f(0.1, 0.1)
+	if #frame_history > 1 then
+		local frames = extract_series(frame_history, "frames")
 
-	while obs.gs_effect_loop(effect_solid, "Solid") do
-		obs.gs_render_stop(obs.GS_LINESTRIP)
+		obs.gs_matrix_push()
+		obs.gs_matrix_translate3f(1, 0, 0)
+		obs.gs_matrix_scale3f(-1, 1, 1)
+		obs.gs_matrix_scale3f(1/(#frames-1), 1/table_max(frames), 1)
+
+		obs.gs_render_start(true)
+
+		for i,f in ipairs(frames) do
+			obs.gs_vertex2f(i-1, f)
+		end
+
+		while obs.gs_effect_loop(effect_solid, "Solid") do
+			obs.gs_render_stop(obs.GS_LINESTRIP)
+		end
+
+		local dropped = extract_series(frame_history, "dropped")
+
+		obs.gs_render_start(true)
+
+		for i,d in ipairs(dropped) do
+			obs.gs_vertex2f(i-1, d)
+			obs.gs_vertex2f(i-1, 0)
+		end
+
+		obs.gs_effect_set_color(color_param, 0x88ff0000)
+		while obs.gs_effect_loop(effect_solid, "Solid") do
+			obs.gs_render_stop(obs.GS_TRISTRIP)
+		end
+
+		obs.gs_matrix_pop()
 	end
 
 	obs.gs_matrix_pop()
