@@ -13,6 +13,7 @@ local graph_margin = 0
 local sample_seconds = 60
 local alarm_level = 0.2
 local alarm_source = ""
+local mode = "live"
 
 local frame_history = {}
 local alarm_active = false
@@ -21,18 +22,21 @@ local fake_frames = 0
 local fake_dropped = 0
 
 function update_frames()
-	local output = nil --obs.obs_get_output_by_name("simple_stream")
 	local frames = 0
 	local dropped = 0
-	if output ~= nil then
-		frames = obs.obs_output_get_total_frames(output)
-		dropped = obs.obs_output_get_frames_dropped(output)
-		obs.obs_output_release(output)
-	else
+
+	if mode == "test" then
 		fake_frames = fake_frames + math.random(19,21)
 		frames = fake_frames
 		fake_dropped = fake_dropped + math.random(0, 20)
 		dropped = fake_dropped
+	else
+		local output = obs.obs_get_output_by_name("simple_stream")
+		if output ~= nil then
+			frames = obs.obs_output_get_total_frames(output)
+			dropped = obs.obs_output_get_frames_dropped(output)
+			obs.obs_output_release(output)
+		end
 	end
 
 	--script_log(dropped .. "/" .. frames)
@@ -161,6 +165,10 @@ function script_properties()
 
 	local props = obs.obs_properties_create()
 
+	local m = obs.obs_properties_add_list(props, "mode", "Mode", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
+	obs.obs_property_list_add_string(m, "Live", "live")
+	obs.obs_property_list_add_string(m, "Test", "test")
+
 	local ss = obs.obs_properties_add_int(props, "sample_seconds", "Sample Seconds", 1, 300, 5) 
 	obs.obs_property_set_modified_callback(ss, sample_modified)
 
@@ -193,6 +201,7 @@ function script_defaults(settings)
 	obs.obs_data_set_default_int(settings, "sample_seconds", 60)
 	obs.obs_data_set_default_int(settings, "alarm_level", 20)
 	obs.obs_data_set_default_string(settings, "alarm_source", "")
+	obs.obs_data_set_default_string(settings, "mode", "live")
 end
 
 --
@@ -204,6 +213,7 @@ function script_update(settings)
 	sample_seconds = obs.obs_data_get_int(settings, "sample_seconds")
 	alarm_level = obs.obs_data_get_int(settings, "alarm_level") / 100
 	alarm_source = obs.obs_data_get_string(settings, "alarm_source")
+	mode = obs.obs_data_get_string(settings, "mode")
 end
 
 -- a function named script_load will be called on startup
