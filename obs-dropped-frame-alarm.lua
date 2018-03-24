@@ -118,14 +118,6 @@ function table_max(table)
 	return best
 end
 
-function sample_modified(props, p, settings)
-	return false -- text controls refreshing properties reset focus on each character
-end
-
-function alarm_modified(props, p, settings)
-	return false -- text controls refreshing properties reset focus on each character
-end
-
 function test_alarm(props, p, set)
 	play_alarm()
 	return true
@@ -170,10 +162,8 @@ function script_properties()
 	obs.obs_property_list_add_string(m, "Test", "test")
 
 	local ss = obs.obs_properties_add_int(props, "sample_seconds", "Sample Seconds", 1, 300, 5) 
-	obs.obs_property_set_modified_callback(ss, sample_modified)
 
 	local al = obs.obs_properties_add_int(props, "alarm_level", "Alarm Level", 0, 100, 5)
-	obs.obs_property_set_modified_callback(ss, level_modified)
 
 	local p = obs.obs_properties_add_list(props, "alarm_source", "Alarm Media Source", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
 	local sources = obs.obs_enum_sources()
