@@ -10,10 +10,11 @@ local graph_width = 600
 local graph_height = 200
 local graph_margin = 0
 
+local mode = "live"
+local output_mode = "simple_stream"
 local sample_seconds = 60
 local alarm_level = 0.2
 local alarm_source = ""
-local mode = "live"
 
 local frame_history = {}
 local alarm_active = false
@@ -31,7 +32,7 @@ function update_frames()
 		fake_dropped = fake_dropped + math.random(0, 20)
 		dropped = fake_dropped
 	else
-		local output = obs.obs_get_output_by_name("simple_stream")
+		local output = obs.obs_get_output_by_name(output_mode)
 		if output ~= nil then
 			frames = obs.obs_output_get_total_frames(output)
 			dropped = obs.obs_output_get_frames_dropped(output)
@@ -161,6 +162,10 @@ function script_properties()
 	obs.obs_property_list_add_string(m, "Live", "live")
 	obs.obs_property_list_add_string(m, "Test", "test")
 
+	local m = obs.obs_properties_add_list(props, "output_mode", "Output Mode", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
+	obs.obs_property_list_add_string(m, "Simple", "simple_stream")
+	obs.obs_property_list_add_string(m, "Advanced", "adv_stream")
+
 	local ss = obs.obs_properties_add_int(props, "sample_seconds", "Sample Seconds", 1, 300, 5) 
 
 	local al = obs.obs_properties_add_int(props, "alarm_level", "Alarm Level", 0, 100, 5)
@@ -188,10 +193,11 @@ end
 function script_defaults(settings)
 	script_log("defaults")
 
+	obs.obs_data_set_default_string(settings, "mode", "live")
+	obs.obs_data_set_default_string(settings, "output_mode", "simple_stream")
 	obs.obs_data_set_default_int(settings, "sample_seconds", 60)
 	obs.obs_data_set_default_int(settings, "alarm_level", 20)
 	obs.obs_data_set_default_string(settings, "alarm_source", "")
-	obs.obs_data_set_default_string(settings, "mode", "live")
 end
 
 --
@@ -200,10 +206,11 @@ function script_update(settings)
 	script_log("update")
 	my_settings = settings
 
+	mode = obs.obs_data_get_string(settings, "mode")
+	output_mode = obs.obs_data_get_string(settings, "output_mode")
 	sample_seconds = obs.obs_data_get_int(settings, "sample_seconds")
 	alarm_level = obs.obs_data_get_int(settings, "alarm_level") / 100
 	alarm_source = obs.obs_data_get_string(settings, "alarm_source")
-	mode = obs.obs_data_get_string(settings, "mode")
 end
 
 function output_stop(calldata)
@@ -215,7 +222,7 @@ function script_load(settings)
 	script_log("load")
 	--dump_obs()
 	obs.timer_add(update_frames, sample_rate)
-	local output = obs.obs_get_output_by_name("simple_stream")
+	local output = obs.obs_get_output_by_name(output_mode)
 	if output ~= nil then
 		local handler = obs_output_get_signal_handler(output)
 		if handler ~= nil then
@@ -227,7 +234,7 @@ end
 
 function script_unload()
 	set_alarm_visible(false)
-	local output = obs.obs_get_output_by_name("simple_stream")
+	local output = obs.obs_get_output_by_name(output_mode)
 	if output ~= nil then
 		local handler = obs_output_get_signal_handler(output)
 		if handler ~= nil then
