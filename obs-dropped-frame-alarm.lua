@@ -8,7 +8,7 @@ end
 local sample_rate = 1000
 local graph_width = 600
 local graph_height = 200
-local graph_margin = 10
+local graph_margin = 0
 
 local sample_seconds = 60
 local alarm_level = 0.2
@@ -227,24 +227,10 @@ source_def.get_name = function()
 end
 
 source_def.create = function(source, settings)
-	local data = {}
-	obs.obs_enter_graphics()
-	obs.gs_render_start(true);
-	obs.gs_vertex2f(0.001, 0.001);
-	obs.gs_vertex2f(0.001, 0.997);
-	obs.gs_vertex2f(0.997, 0.997);
-	obs.gs_vertex2f(0.997, 0.001);
-	obs.gs_vertex2f(0.001, 0.001);
-	data.outer_box = obs.gs_render_save();
-	obs.obs_leave_graphics()
-
-	return data
+	return nil
 end
 
 source_def.destroy = function(data)
-	obs.obs_enter_graphics()
-	obs.gs_vertexbuffer_destroy(data.outer_box)
-	obs.obs_leave_graphics()
 end
 
 function fill(color)
@@ -270,11 +256,6 @@ function stroke(color)
 end
 
 source_def.video_render = function(data, effect)
-	if not data.outer_box then
-		script_log("no vertex buffer")
-		return
-	end
-
 	obs.gs_blend_state_push()
 	obs.gs_reset_blend_state()
 
@@ -282,19 +263,10 @@ source_def.video_render = function(data, effect)
 	local color_param = obs.gs_effect_get_param_by_name(effect_solid, "color");
 
 	obs.gs_matrix_push()
-	obs.gs_matrix_scale3f(graph_width, graph_height, 1)
-	obs.gs_load_vertexbuffer(data.outer_box)
-	fill(0xff444444)
-	obs.gs_matrix_pop()
-
-	obs.gs_matrix_push()
 	obs.gs_matrix_translate3f(graph_margin, graph_margin, 0)
 	obs.gs_matrix_scale3f(graph_width - graph_margin*2, graph_height - graph_margin*2, 1)
 	obs.gs_matrix_translate3f(0, 1, 0)
 	obs.gs_matrix_scale3f(1, -1, 1)
-
-	--obs.gs_load_vertexbuffer(data.outer_box)
-	--stroke(0xffffffff)
 
 	if #frame_history > 1 then
 		local frames = extract_series(frame_history, "frames")
@@ -303,16 +275,6 @@ source_def.video_render = function(data, effect)
 		obs.gs_matrix_translate3f(1, 0, 0)
 		obs.gs_matrix_scale3f(-1, 1, 1)
 		obs.gs_matrix_scale3f(1/(#frames-1), 1/table_max(frames), 1)
-
-		obs.gs_render_start(true)
-
-		for i,f in ipairs(frames) do
-			obs.gs_vertex2f(i-1, f)
-		end
-
-		while obs.gs_effect_loop(effect_solid, "Solid") do
-			obs.gs_render_stop(obs.GS_LINESTRIP)
-		end
 
 		local dropped = extract_series(frame_history, "dropped")
 
@@ -323,7 +285,7 @@ source_def.video_render = function(data, effect)
 			obs.gs_vertex2f(i-1, 0)
 		end
 
-		obs.gs_effect_set_color(color_param, 0x88ff0000)
+		obs.gs_effect_set_color(color_param, 0xffff0000)
 		while obs.gs_effect_loop(effect_solid, "Solid") do
 			obs.gs_render_stop(obs.GS_TRISTRIP)
 		end
