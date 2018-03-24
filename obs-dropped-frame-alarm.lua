@@ -171,7 +171,7 @@ function script_update(settings)
 	my_settings = settings
 
 	sample_seconds = obs.obs_data_get_int(settings, "sample_seconds")
-	alarm_level = 100 * obs.obs_data_get_int(settings, "alarm_level")
+	alarm_level = obs.obs_data_get_int(settings, "alarm_level") / 100
 	alarm_source = obs.obs_data_get_string(settings, "alarm_source")
 end
 
