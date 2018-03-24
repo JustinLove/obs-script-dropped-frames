@@ -172,6 +172,12 @@ end
 -- A function named script_description returns the description shown to
 -- the user
 local description = [[Play an alarm if you start dropping frames
+
+Add a media source for the alarm. A suitable sound file is provided with the script. Open Advanced Audio Properties for the source and change Audio Monitoring to Monitor Only (mute output).
+
+Add a copy of the alarm source to every scene where you want to hear it.
+
+A custom source is available for drawing a dropped frame graph in the sample period. It can be added to the source panel. You may want to hide it and use a windowed projector to view the graph yourself.
 ]]
 function script_description()
 	return description
@@ -187,14 +193,18 @@ function script_properties()
 	local m = obs.obs_properties_add_list(props, "mode", "Mode", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
 	obs.obs_property_list_add_string(m, "Live", "live")
 	obs.obs_property_list_add_string(m, "Test", "test")
+	obs.obs_property_set_long_description(m, "Test generates fake frame counts.")
 
-	local m = obs.obs_properties_add_list(props, "output_mode", "Output Mode", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
-	obs.obs_property_list_add_string(m, "Simple", "simple_stream")
-	obs.obs_property_list_add_string(m, "Advanced", "adv_stream")
+	local o = obs.obs_properties_add_list(props, "output_mode", "Output Mode", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
+	obs.obs_property_list_add_string(o, "Simple", "simple_stream")
+	obs.obs_property_list_add_string(o, "Advanced", "adv_stream")
+	obs.obs_property_set_long_description(o, "Must match the OBS streaming mode you are using.")
 
 	local ss = obs.obs_properties_add_int(props, "sample_seconds", "Sample Seconds", 1, 300, 5) 
+	obs.obs_property_set_long_description(ss, "Period during which the alarm level is checked.")
 
 	local al = obs.obs_properties_add_int(props, "alarm_level", "Alarm Level", 0, 100, 5)
+	obs.obs_property_set_long_description(al, "Percentage of dropped frames in sample period which should trigger the alarm.")
 
 	local p = obs.obs_properties_add_list(props, "alarm_source", "Alarm Media Source", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
 	local sources = obs.obs_enum_sources()
@@ -208,9 +218,10 @@ function script_properties()
 		end
 	end
 	obs.source_list_release(sources)
+	obs.obs_property_set_long_description(p, "See above for how to create an appropriate media source.")
 
 	local ref = obs.obs_properties_add_button(props, "test_alarm", "Test Alarm", test_alarm)
-	obs.obs_property_set_long_description(ref, "Updated calculated fields with changes from text controls.")
+	obs.obs_property_set_long_description(ref, "Test activating selected media sources")
 
 	return props
 end

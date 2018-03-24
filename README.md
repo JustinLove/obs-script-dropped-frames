@@ -1,6 +1,6 @@
 # OBS Dropped Frame Alarm
 
-Plays a audio alarm (media source) when [OBS Studio](https://obsproject.com/) dropped frames are detected.
+Plays a audio alarm (media source) when [OBS Studio](https://obsproject.com/) dropped frames are detected, draws a graph of recent dropped frames.
 
 ## Requirements
 
@@ -13,6 +13,8 @@ Add a media source for the alarm. A suitable sound file is provided with the scr
 Add a copy of the alarm source to every scene where you want to hear it.
 
 You may configure the sample window for alarms, as well as the percent of dropped frames to alarm at.
+
+A custom source is available for drawing a dropped frame graph in the sample period. It can be added to the source panel. You may want to hide it and use a windowed projector to view the graph yourself.
 
 ## Credits
 
