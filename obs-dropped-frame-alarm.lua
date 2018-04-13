@@ -283,7 +283,7 @@ source_def.get_name = function()
 end
 
 source_def.create = function(source, settings)
-	return nil
+	return {}
 end
 
 source_def.destroy = function(data)
