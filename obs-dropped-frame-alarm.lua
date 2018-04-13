@@ -110,7 +110,7 @@ end
 function hook_output()
 	local output = obs.obs_get_output_by_name(output_mode)
 	if output ~= nil then
-		local handler = obs_output_get_signal_handler(output)
+		local handler = obs.obs_output_get_signal_handler(output)
 		if handler ~= nil then
 			obs.signal_handler_connect(handler, "stop", output_stop)
 		end
@@ -121,7 +121,7 @@ end
 function unhook_output()
 	local output = obs.obs_get_output_by_name(output_mode)
 	if output ~= nil then
-		local handler = obs_output_get_signal_handler(output)
+		local handler = obs.obs_output_get_signal_handler(output)
 		if handler ~= nil then
 			obs.signal_handler_disconnect(handler, "stop", output_stop)
 		end
@@ -259,10 +259,6 @@ function script_update(settings)
 	alarm_source = obs.obs_data_get_string(settings, "alarm_source")
 end
 
-function output_stop(calldata)
-	set_alarm_visible(false)
-end
-
 -- a function named script_load will be called on startup
 function script_load(settings)
 	script_log("load")
@@ -273,8 +269,8 @@ end
 
 function script_unload()
 	set_alarm_visible(false)
-	unhook_output()
-	-- this crashes OBS
+	-- these crash OBS
+	--unhook_output()
 	--obs.timer_remove(update_frames)
 end
 
