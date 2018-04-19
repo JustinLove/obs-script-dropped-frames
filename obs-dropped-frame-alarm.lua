@@ -25,6 +25,7 @@ local fake_dropped = 0
 function update_frames()
 	local frames = 0
 	local dropped = 0
+	local congestion = 0.0
 
 	if mode == "test" then
 		fake_frames = fake_frames + math.random(19,21)
@@ -34,6 +35,7 @@ function update_frames()
 		congestion = math.random()
 	else
 		local output = obs.obs_get_output_by_name(output_mode)
+		-- output will be nil when not actually streaming
 		if output ~= nil then
 			frames = obs.obs_output_get_total_frames(output)
 			dropped = obs.obs_output_get_frames_dropped(output)
