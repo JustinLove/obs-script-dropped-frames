@@ -2,7 +2,13 @@ obs = obslua
 bit = require("bit")
 
 function script_log(message)
-	obs.script_log(obs.LOG_INFO, message)
+	if false then
+		obs.script_log(obs.LOG_INFO, message)
+	end
+end
+
+function script_error(message)
+	obs.script_log(obs.LOG_ERROR, message)
 end
 
 local sample_rate = 1000
