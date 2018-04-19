@@ -31,11 +31,13 @@ function update_frames()
 		frames = fake_frames
 		fake_dropped = fake_dropped + math.random(0, 20)
 		dropped = fake_dropped
+		congestion = math.random()
 	else
 		local output = obs.obs_get_output_by_name(output_mode)
 		if output ~= nil then
 			frames = obs.obs_output_get_total_frames(output)
 			dropped = obs.obs_output_get_frames_dropped(output)
+			congestion = obs.obs_output_get_congestion(output)
 			obs.obs_output_release(output)
 		end
 	end
@@ -43,7 +45,7 @@ function update_frames()
 	--script_log(dropped .. "/" .. frames)
 
 	table.insert(frame_history, 1,
-		{frames = frames, dropped = dropped})
+		{frames = frames, dropped = dropped, congestion = congestion})
 
 	local sample_size = (sample_seconds * 1000 / sample_rate) + 1
 	-- + 1 so that we get n differences
@@ -83,7 +85,7 @@ end
 
 function activate_alarm()
 	set_alarm_visible(true)
-	obs.remove_current_callback()
+	obs.timer_remove(activate_alarm)
 end
 
 function play_alarm()
@@ -95,11 +97,11 @@ function set_alarm_visible(visible)
 	if alarm_source ~= nil then
 		local current_source = obs.obs_frontend_get_current_scene()
 		local current_scene = obs.obs_scene_from_source(current_source)
-		obs.obs_source_release(current_source)
 		local item = obs.obs_scene_find_source(current_scene, alarm_source)
 		if item ~= nil then
 			obs.obs_sceneitem_set_visible(item, visible)
 		end
+		obs.obs_source_release(current_source)
 	end
 end
 
@@ -177,7 +179,7 @@ Add a media source for the alarm. A suitable sound file is provided with the scr
 
 Add a copy of the alarm source to every scene where you want to hear it.
 
-A custom source is available for drawing a dropped frame graph in the sample period. It can be added to the source panel. You may want to hide it and use a windowed projector to view the graph yourself.
+A custom source is available for drawing a dropped frame graph in the sample period. It can be added to the source panel. You may want to hide it and use a windowed projector to view the graph yourself. Yellow shows congestion, red shows fraction of dropped frames.
 ]]
 function script_description()
 	return description
@@ -330,7 +332,22 @@ source_def.video_render = function(data, effect)
 		obs.gs_matrix_push()
 		obs.gs_matrix_translate3f(1, 0, 0)
 		obs.gs_matrix_scale3f(-1, 1, 1)
-		obs.gs_matrix_scale3f(1/(#frames-1), 1/table_max(frames), 1)
+		obs.gs_matrix_scale3f(1/(#frames-1), 1, 1)
+
+		obs.gs_render_start(true)
+
+		for i,h in ipairs(frame_history) do
+			obs.gs_vertex2f(i-1, h.congestion)
+			obs.gs_vertex2f(i-1, 0)
+		end
+
+		obs.gs_effect_set_color(color_param, 0xccffff00)
+		while obs.gs_effect_loop(effect_solid, "Solid") do
+			obs.gs_render_stop(obs.GS_TRISTRIP)
+		end
+
+		obs.gs_matrix_push()
+		obs.gs_matrix_scale3f(1, 1/table_max(frames), 1)
 
 		local dropped = extract_series(frame_history, "dropped")
 
@@ -341,10 +358,12 @@ source_def.video_render = function(data, effect)
 			obs.gs_vertex2f(i-1, 0)
 		end
 
-		obs.gs_effect_set_color(color_param, 0xffff0000)
+		obs.gs_effect_set_color(color_param, 0xccff0000)
 		while obs.gs_effect_loop(effect_solid, "Solid") do
 			obs.gs_render_stop(obs.GS_TRISTRIP)
 		end
+
+		obs.gs_matrix_pop()
 
 		obs.gs_matrix_pop()
 	end

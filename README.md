@@ -14,7 +14,7 @@ Add a copy of the alarm source to every scene where you want to hear it.
 
 You may configure the sample window for alarms, as well as the percent of dropped frames to alarm at.
 
-A custom source is available for drawing a dropped frame graph in the sample period. It can be added to the source panel. You may want to hide it and use a windowed projector to view the graph yourself.
+A custom source is available for drawing a dropped frame graph in the sample period. It can be added to the source panel. You may want to hide it and use a windowed projector to view the graph yourself. Yellow shows congestion, red shows fraction of dropped frames.
 
 ## Credits
 
