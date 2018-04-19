@@ -18,6 +18,7 @@ local alarm_source = ""
 
 local frame_history = {}
 local alarm_active = false
+local last_alarm_visible = false
 
 local fake_frames = 0
 local fake_dropped = 0
@@ -41,6 +42,8 @@ function update_frames()
 			dropped = obs.obs_output_get_frames_dropped(output)
 			congestion = obs.obs_output_get_congestion(output)
 			obs.obs_output_release(output)
+		elseif last_alarm_visible == true then
+			set_alarm_visible(false)
 		end
 	end
 
@@ -96,40 +99,16 @@ function play_alarm()
 end
 
 function set_alarm_visible(visible)
+	last_alarm_visible = false
 	if alarm_source ~= nil then
 		local current_source = obs.obs_frontend_get_current_scene()
 		local current_scene = obs.obs_scene_from_source(current_source)
 		local item = obs.obs_scene_find_source(current_scene, alarm_source)
 		if item ~= nil then
 			obs.obs_sceneitem_set_visible(item, visible)
+			last_alarm_visible = visible
 		end
 		obs.obs_source_release(current_source)
-	end
-end
-
-function output_stop(calldata)
-	set_alarm_visible(false)
-end
-
-function hook_output()
-	local output = obs.obs_get_output_by_name(output_mode)
-	if output ~= nil then
-		local handler = obs.obs_output_get_signal_handler(output)
-		if handler ~= nil then
-			obs.signal_handler_connect(handler, "stop", output_stop)
-		end
-		obs.obs_output_release(output)
-	end
-end
-
-function unhook_output()
-	local output = obs.obs_get_output_by_name(output_mode)
-	if output ~= nil then
-		local handler = obs.obs_output_get_signal_handler(output)
-		if handler ~= nil then
-			obs.signal_handler_disconnect(handler, "stop", output_stop)
-		end
-		obs.obs_output_release(output)
 	end
 end
 
@@ -249,14 +228,7 @@ function script_update(settings)
 
 	mode = obs.obs_data_get_string(settings, "mode")
 
-	local new_output_mode = obs.obs_data_get_string(settings, "output_mode")
-	if new_output_mode ~= output_mode then
-		unhook_output()
-		output_mode = new_output_mode
-		hook_output()
-	else
-		output_mode = new_output_mode
-	end
+	output_mode = obs.obs_data_get_string(settings, "output_mode")
 
 	sample_seconds = obs.obs_data_get_int(settings, "sample_seconds")
 	alarm_level = obs.obs_data_get_int(settings, "alarm_level") / 100
@@ -268,13 +240,11 @@ function script_load(settings)
 	script_log("load")
 	--dump_obs()
 	obs.timer_add(update_frames, sample_rate)
-	hook_output()
 end
 
 function script_unload()
 	set_alarm_visible(false)
 	-- these crash OBS
-	--unhook_output()
 	--obs.timer_remove(update_frames)
 end
 
