@@ -2,7 +2,7 @@ obs = obslua
 bit = require("bit")
 
 function script_log(message)
-	if false then
+	if true then
 		obs.script_log(obs.LOG_INFO, message)
 	end
 end
@@ -24,7 +24,6 @@ local alarm_source = ""
 
 local frame_history = {}
 local alarm_active = false
-local last_alarm_visible = false
 
 local fake_frames = 0
 local fake_dropped = 0
@@ -44,12 +43,11 @@ function update_frames()
 		local output = obs.obs_get_output_by_name(output_mode)
 		-- output will be nil when not actually streaming
 		if output ~= nil then
+			script_log("got output")
 			frames = obs.obs_output_get_total_frames(output)
 			dropped = obs.obs_output_get_frames_dropped(output)
 			congestion = obs.obs_output_get_congestion(output)
 			obs.obs_output_release(output)
-		elseif last_alarm_visible == true then
-			set_alarm_visible(false)
 		end
 	end
 
@@ -105,14 +103,12 @@ function play_alarm()
 end
 
 function set_alarm_visible(visible)
-	last_alarm_visible = false
 	if alarm_source ~= nil then
 		local current_source = obs.obs_frontend_get_current_scene()
 		local current_scene = obs.obs_scene_from_source(current_source)
 		local item = obs.obs_scene_find_source(current_scene, alarm_source)
 		if item ~= nil then
 			obs.obs_sceneitem_set_visible(item, visible)
-			last_alarm_visible = visible
 		end
 		obs.obs_source_release(current_source)
 	end
