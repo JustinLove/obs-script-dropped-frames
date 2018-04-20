@@ -118,8 +118,23 @@ function set_alarm_visible(visible)
 	end
 end
 
+function hide_all_alarms()
+	local names = obs.obs_frontend_get_scene_names()
+	for _,name in ipairs(names) do
+		local source = obs.obs_get_source_by_name(name)
+		local scene = obs.obs_scene_from_source(source)
+		if scene ~= nil then
+			local item = obs.obs_scene_find_source(scene, alarm_source)
+			if item ~= nil then
+				obs.obs_sceneitem_set_visible(item, false)
+			end
+		end
+		obs.obs_source_release(source)
+	end
+end
+
 function output_stop(calldata)
-	set_alarm_visible(false)
+	hide_all_alarms()
 end
 
 function hook_output()
@@ -287,6 +302,7 @@ function script_unload()
 	set_alarm_visible(false)
 	-- these crash OBS
 	--unhook_output()
+	--hide_all_alarms()
 	--obs.timer_remove(update_frames)
 end
 
