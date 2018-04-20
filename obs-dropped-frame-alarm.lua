@@ -24,6 +24,7 @@ local alarm_source = ""
 
 local frame_history = {}
 local alarm_active = false
+local has_hooked_output = false
 
 local fake_frames = 0
 local fake_dropped = 0
@@ -43,11 +44,14 @@ function update_frames()
 		local output = obs.obs_get_output_by_name(output_mode)
 		-- output will be nil when not actually streaming
 		if output ~= nil then
-			script_log("got output")
 			frames = obs.obs_output_get_total_frames(output)
 			dropped = obs.obs_output_get_frames_dropped(output)
 			congestion = obs.obs_output_get_congestion(output)
 			obs.obs_output_release(output)
+
+			if has_hooked_output == false then
+				hook_output()
+			end
 		end
 	end
 
@@ -123,6 +127,7 @@ function hook_output()
 	if output ~= nil then
 		local handler = obs.obs_output_get_signal_handler(output)
 		if handler ~= nil then
+			has_hooked_output = true
 			obs.signal_handler_connect(handler, "stop", output_stop)
 		end
 		obs.obs_output_release(output)
