@@ -2,7 +2,7 @@ obs = obslua
 bit = require("bit")
 
 function script_log(message)
-	if true then
+	if false then
 		obs.script_log(obs.LOG_INFO, message)
 	end
 end
