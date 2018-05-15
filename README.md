@@ -1,10 +1,14 @@
 # OBS Dropped Frame Alarm
 
-Plays a audio alarm (media source) when [OBS Studio](https://obsproject.com/) dropped frames are detected, draws a graph of recent dropped frames.
+[OBS Lua Script](https://obsproject.com/docs/scripting.html) which plays a audio alarm (media source) when [OBS Studio](https://obsproject.com/) dropped frames are detected, and draws a graph of recent dropped frames.
 
 ## Requirements
 
 - [OBS Studio](https://obsproject.com/)
+
+## Incompatabilites
+
+[OBS-Websockets connections will be disrupted when the alarm activates.](https://obsproject.com/forum/threads/making-a-source-visible-from-a-script-timer-stops-obs-websocket-updates.83140/)
 
 ## Usage
 
