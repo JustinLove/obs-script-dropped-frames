@@ -38,6 +38,7 @@ local lagged_frame_alarm_level = 0.2
 local skipped_frame_alarm_level = 0.2
 local dropped_frame_alarm_level = 0.2
 local alarm_source = ""
+local alarm_repeat = 60
 
 local frame_history = {}
 local alarm_active = false
@@ -155,7 +156,7 @@ function check_alarm()
 		if not alarm_active then
 			play_alarm()
 			alarm_active = true
-			obs.timer_add(play_alarm, 60*1000)
+			obs.timer_add(play_alarm, alarm_repeat*1000)
 		end
 	else
 		if alarm_active then
@@ -310,6 +311,9 @@ function script_properties()
 	obs.source_list_release(sources)
 	obs.obs_property_set_long_description(p, "See above for how to create an appropriate media source.")
 
+	local rep = obs.obs_properties_add_int(props, "alarm_repeat", "Alarm Repeat Seconds", 0, 60*60, 5)
+	obs.obs_property_set_long_description(dfal, "Number of seconds before repeating alarm if condition remains true.")
+
 	local ref = obs.obs_properties_add_button(props, "test_alarm", "Test Alarm", test_alarm)
 	obs.obs_property_set_long_description(ref, "Test activating selected media sources")
 
@@ -327,6 +331,7 @@ function script_defaults(settings)
 	obs.obs_data_set_default_int(settings, "skipped_frame_alarm_level", 20)
 	obs.obs_data_set_default_int(settings, "dropped_frame_alarm_level", 20)
 	obs.obs_data_set_default_string(settings, "alarm_source", "")
+	obs.obs_data_set_default_int(settings, "alarm_repeat", 60)
 end
 
 --
@@ -351,6 +356,12 @@ function script_update(settings)
 	skipped_frame_alarm_level = obs.obs_data_get_int(settings, "skipped_frame_alarm_level") / 100
 	dropped_frame_alarm_level = obs.obs_data_get_int(settings, "dropped_frame_alarm_level") / 100
 	alarm_source = obs.obs_data_get_string(settings, "alarm_source")
+	alarm_repeat = obs.obs_data_get_int(settings, "alarm_repeat")
+
+	if alarm_active then
+		obs.timer_remove(play_alarm)
+		obs.timer_add(play_alarm, alarm_repeat*1000)
+	end
 end
 
 -- a function named script_load will be called on startup
