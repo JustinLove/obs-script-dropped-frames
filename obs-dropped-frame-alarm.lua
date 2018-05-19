@@ -403,6 +403,28 @@ function stroke(color)
 	end
 end
 
+function area_chart(value, total, effect_solid)
+	obs.gs_matrix_push()
+	local frames = extract_series(frame_history, total)
+	obs.gs_matrix_scale3f(1, 1/table_max(frames), 1)
+
+	local values = extract_series(frame_history, value)
+
+	obs.gs_render_start(true)
+
+	for i,d in ipairs(values) do
+		obs.gs_vertex2f(i-1, d)
+		obs.gs_vertex2f(i-1, 0)
+	end
+
+	while obs.gs_effect_loop(effect_solid, "Solid") do
+		obs.gs_render_stop(obs.GS_TRISTRIP)
+	end
+
+	obs.gs_matrix_pop()
+end
+
+
 source_def.video_render = function(data, effect)
 	obs.gs_blend_state_push()
 	obs.gs_reset_blend_state()
@@ -417,12 +439,10 @@ source_def.video_render = function(data, effect)
 	obs.gs_matrix_scale3f(1, -1, 1)
 
 	if #frame_history > 1 then
-		local output_frames = extract_series(frame_history, "output_frames")
-
 		obs.gs_matrix_push()
 		obs.gs_matrix_translate3f(1, 0, 0)
 		obs.gs_matrix_scale3f(-1, 1, 1)
-		obs.gs_matrix_scale3f(1/(#output_frames-1), 1, 1)
+		obs.gs_matrix_scale3f(1/(#frame_history-1), 1, 1)
 
 		obs.gs_render_start(true)
 
@@ -436,24 +456,12 @@ source_def.video_render = function(data, effect)
 			obs.gs_render_stop(obs.GS_TRISTRIP)
 		end
 
-		obs.gs_matrix_push()
-		obs.gs_matrix_scale3f(1, 1/table_max(output_frames), 1)
-
-		local output_dropped = extract_series(frame_history, "output_dropped")
-
-		obs.gs_render_start(true)
-
-		for i,d in ipairs(output_dropped) do
-			obs.gs_vertex2f(i-1, d)
-			obs.gs_vertex2f(i-1, 0)
-		end
-
 		obs.gs_effect_set_color(color_param, 0xccff0000)
-		while obs.gs_effect_loop(effect_solid, "Solid") do
-			obs.gs_render_stop(obs.GS_TRISTRIP)
-		end
-
-		obs.gs_matrix_pop()
+		area_chart("output_dropped", "output_frames", effect_solid)
+		obs.gs_effect_set_color(color_param, 0xcc0000ff)
+		area_chart("encoder_skipped", "encoder_frames", effect_solid)
+		obs.gs_effect_set_color(color_param, 0xcc00ff00)
+		area_chart("render_lagged", "render_frames", effect_solid)
 
 		obs.gs_matrix_pop()
 	end
