@@ -233,25 +233,6 @@ function test_alarm(props, p, set)
 	return true
 end
 
-function dump_obs()
-	local keys = {}
-	for key,value in pairs(obs) do
-		keys[#keys+1] = key
-	end
-	table.sort(keys)
-	local output = {}
-	for i,key in ipairs(keys) do
-		local value = type(obs[key])
-		if value == 'number' then
-			value = obs[key]
-		elseif value == 'string' then
-			value = '"' .. obs[key] .. '"'
-		end
-		output[i] = key .. " : " .. value
-	end
-	script_log(table.concat(output, "\n"))
-end
-
 -- A function named script_description returns the description shown to
 -- the user
 local description = [[Play an alarm if you start dropping frames
@@ -345,7 +326,6 @@ end
 -- a function named script_load will be called on startup
 function script_load(settings)
 	script_log("load")
-	--dump_obs()
 	obs.timer_add(update_frames, sample_rate)
 	hook_output()
 end
