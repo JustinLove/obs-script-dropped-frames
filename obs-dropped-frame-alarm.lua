@@ -11,6 +11,21 @@ function script_error(message)
 	obs.script_log(obs.LOG_ERROR, message)
 end
 
+ffi = require("ffi")
+
+ffi.cdef[[
+
+struct video_output;
+typedef struct video_output video_t;
+
+uint32_t video_output_get_skipped_frames(const video_t *video);
+uint32_t video_output_get_total_frames(const video_t *video);
+video_t *obs_get_video(void);
+
+]]
+
+local obsffi = ffi.load("obs")
+
 local sample_rate = 1000
 local graph_width = 600
 local graph_height = 200
@@ -27,12 +42,16 @@ local alarm_active = false
 local has_hooked_output = false
 
 local fake_frames = 0
-local fake_dropped = 0
 local fake_lagged = 0
+local fake_skipped = 0
+local fake_dropped = 0
 
 function update_frames()
 	local render_frames = 0
 	local render_lagged = 0
+
+	local encoder_frames = 0
+	local encoder_skipped = 0
 
 	local output_frames = 0
 	local output_dropped = 0
@@ -45,6 +64,10 @@ function update_frames()
 		fake_lagged = fake_lagged + math.random(0, 20)
 		render_lagged = fake_lagged
 
+		encoder_frames = fake_frames
+		fake_skipped = fake_skipped + math.random(0, 20)
+		encoder_skipped = fake_skipped
+
 		output_frames = fake_frames
 		fake_dropped = fake_dropped + math.random(0, 20)
 		output_dropped = fake_dropped
@@ -52,6 +75,13 @@ function update_frames()
 	else
 		render_frames = obs.obs_get_total_frames()
 		render_lagged = obs.obs_get_lagged_frames()
+
+		local video = obsffi.obs_get_video()
+		if video ~= nil then
+			encoder_frames = obsffi.video_output_get_total_frames(video)
+			encoder_skipped = obsffi.video_output_get_skipped_frames(video)
+		end
+
 		local output = obs.obs_get_output_by_name(output_mode)
 		-- output will be nil when not actually streaming
 		if output ~= nil then
@@ -67,10 +97,15 @@ function update_frames()
 	end
 
 	--script_log("render" .. render_lagged .. "/" .. render_frames)
+	--script_log("encoder" .. encoder_skipped .. "/" .. encoder_frames)
 	--script_log("output" .. output_dropped .. "/" .. output_frames)
 
 	table.insert(frame_history, 1,
 		{
+			render_frames = render_frames,
+			render_lagged = render_lagged,
+			encoder_frames = encoder_frames,
+			encoder_skipped = encoder_skipped,
 			output_frames = output_frames,
 			output_dropped = output_dropped,
 			output_congestion = output_congestion
