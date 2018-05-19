@@ -419,6 +419,10 @@ source_def.update = function(data, settings)
 end
 
 function area_chart(value, total, color, color_param, effect_solid)
+	if bit.band(color, 0xff000000) == 0 then
+		return
+	end
+
 	obs.gs_matrix_push()
 	local frames = extract_series(frame_history, total)
 	obs.gs_matrix_scale3f(1, 1/table_max(frames), 1)
@@ -464,16 +468,18 @@ source_def.video_render = function(data, effect)
 
 		obs.gs_render_start(true)
 
-		for i,h in ipairs(frame_history) do
-			obs.gs_vertex2f(i-1, h.output_congestion)
-			obs.gs_vertex2f(i-1, 0)
-		end
+		if bit.band(data.congestion_color, 0xff000000) ~= 0 then
+			for i,h in ipairs(frame_history) do
+				obs.gs_vertex2f(i-1, h.output_congestion)
+				obs.gs_vertex2f(i-1, 0)
+			end
 
-		local color = obs.vec4()
-		obs.vec4_from_rgba(color, data.congestion_color);
-		obs.gs_effect_set_vec4(color_param, color);
-		while obs.gs_effect_loop(effect_solid, "Solid") do
-			obs.gs_render_stop(obs.GS_TRISTRIP)
+			local color = obs.vec4()
+			obs.vec4_from_rgba(color, data.congestion_color);
+			obs.gs_effect_set_vec4(color_param, color);
+			while obs.gs_effect_loop(effect_solid, "Solid") do
+				obs.gs_render_stop(obs.GS_TRISTRIP)
+			end
 		end
 
 		area_chart("output_dropped", "output_frames", data.dropped_color, color_param, effect_solid)
