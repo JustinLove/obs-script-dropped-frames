@@ -376,9 +376,9 @@ end
 
 source_def.create = function(source, settings)
 	return {
-		lagged_color = 0xcc00ffff,
-		skipped_color = 0xccffff00,
-		dropped_color = 0xccff0000,
+		lagged_color = 0xccff00ff,
+		skipped_color = 0xcc00ffff,
+		dropped_color = 0xcc0000ff,
 		congestion_color = 0xcc00ff00,
 	}
 end
@@ -387,10 +387,10 @@ source_def.destroy = function(data)
 end
 
 source_def.get_defaults = function(settings)
-	obs.obs_data_set_default_int(settings, "lagged_color", 0xcc00ffff)
-	obs.obs_data_set_default_int(settings, "skipped_color", 0xccffff00)
-	obs.obs_data_set_default_int(settings, "dropped_color", 0xccff0000)
-	obs.obs_data_set_default_int(settings, "congestion_color", 0xcc00f00)
+	obs.obs_data_set_default_int(settings, "lagged_color", 0xccff00ff)
+	obs.obs_data_set_default_int(settings, "skipped_color", 0xcc00ffff)
+	obs.obs_data_set_default_int(settings, "dropped_color", 0xcc0000ff)
+	obs.obs_data_set_default_int(settings, "congestion_color", 0xcc00ff00)
 end
 
 source_def.get_properties = function(data)
@@ -418,7 +418,7 @@ source_def.update = function(data, settings)
 	data.congestion_color = obs.obs_data_get_int(settings, "congestion_color")
 end
 
-function area_chart(value, total, effect_solid)
+function area_chart(value, total, color, color_param, effect_solid)
 	obs.gs_matrix_push()
 	local frames = extract_series(frame_history, total)
 	obs.gs_matrix_scale3f(1, 1/table_max(frames), 1)
@@ -432,6 +432,9 @@ function area_chart(value, total, effect_solid)
 		obs.gs_vertex2f(i-1, 0)
 	end
 
+	local vec = obs.vec4()
+	obs.vec4_from_rgba(vec, color)
+	obs.gs_effect_set_vec4(color_param, vec)
 	while obs.gs_effect_loop(effect_solid, "Solid") do
 		obs.gs_render_stop(obs.GS_TRISTRIP)
 	end
@@ -466,17 +469,16 @@ source_def.video_render = function(data, effect)
 			obs.gs_vertex2f(i-1, 0)
 		end
 
-		obs.gs_effect_set_color(color_param, 0xccffff00)
+		local color = obs.vec4()
+		obs.vec4_from_rgba(color, data.congestion_color);
+		obs.gs_effect_set_vec4(color_param, color);
 		while obs.gs_effect_loop(effect_solid, "Solid") do
 			obs.gs_render_stop(obs.GS_TRISTRIP)
 		end
 
-		obs.gs_effect_set_color(color_param, 0xccff0000)
-		area_chart("output_dropped", "output_frames", effect_solid)
-		obs.gs_effect_set_color(color_param, 0xcc0000ff)
-		area_chart("encoder_skipped", "encoder_frames", effect_solid)
-		obs.gs_effect_set_color(color_param, 0xcc00ff00)
-		area_chart("render_lagged", "render_frames", effect_solid)
+		area_chart("output_dropped", "output_frames", data.dropped_color, color_param, effect_solid)
+		area_chart("encoder_skipped", "encoder_frames", data.skipped_color, color_param, effect_solid)
+		area_chart("render_lagged", "render_frames", data.lagged_color, color_param, effect_solid)
 
 		obs.gs_matrix_pop()
 	end
