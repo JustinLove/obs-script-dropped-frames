@@ -375,10 +375,47 @@ source_def.get_name = function()
 end
 
 source_def.create = function(source, settings)
-	return {}
+	return {
+		lagged_color = 0xcc00ffff,
+		skipped_color = 0xccffff00,
+		dropped_color = 0xccff0000,
+		congestion_color = 0xcc00ff00,
+	}
 end
 
 source_def.destroy = function(data)
+end
+
+source_def.get_defaults = function(settings)
+	obs.obs_data_set_default_int(settings, "lagged_color", 0xcc00ffff)
+	obs.obs_data_set_default_int(settings, "skipped_color", 0xccffff00)
+	obs.obs_data_set_default_int(settings, "dropped_color", 0xccff0000)
+	obs.obs_data_set_default_int(settings, "congestion_color", 0xcc00f00)
+end
+
+source_def.get_properties = function(data)
+	local props = obs.obs_properties_create()
+
+	local lc = obs.obs_properties_add_color(props, "lagged_color", "Rendering Lagged Color")
+	obs.obs_property_set_long_description(lc, "Graph Color for fraction of lagged frames due to rendering lag")
+
+	local sc = obs.obs_properties_add_color(props, "skipped_color", "Encoder Skipped Color")
+	obs.obs_property_set_long_description(sc, "Graph Color for fraction of skipped frames due to encoding lag")
+
+	local dc = obs.obs_properties_add_color(props, "dropped_color", "Network Dropped Color")
+	obs.obs_property_set_long_description(dc, "Graph Color for fraction of dropped frames due to output/network issues")
+
+	local cc = obs.obs_properties_add_color(props, "congestion_color", "Network Congestion Color")
+	obs.obs_property_set_long_description(cc, "Graph Color for congestion resported by network output")
+
+	return props
+end
+
+source_def.update = function(data, settings)
+	data.lagged_color = obs.obs_data_get_int(settings, "lagged_color")
+	data.skipped_color = obs.obs_data_get_int(settings, "skipped_color")
+	data.dropped_color = obs.obs_data_get_int(settings, "dropped_color")
+	data.congestion_color = obs.obs_data_get_int(settings, "congestion_color")
 end
 
 function area_chart(value, total, effect_solid)
