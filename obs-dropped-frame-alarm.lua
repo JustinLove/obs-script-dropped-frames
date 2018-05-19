@@ -34,6 +34,8 @@ local graph_margin = 0
 local mode = "live"
 local output_mode = "simple_stream"
 local sample_seconds = 60
+local lagged_frame_alarm_level = 0.2
+local skipped_frame_alarm_level = 0.2
 local dropped_frame_alarm_level = 0.2
 local alarm_source = ""
 
@@ -126,14 +128,30 @@ function check_alarm()
 	end
 	local newest = frame_history[1]
 	local oldest = frame_history[#frame_history]
+	local render_frames = newest.render_frames - oldest.render_frames
+	local render_lagged = newest.render_lagged - oldest.render_lagged
+	local encoder_frames = newest.encoder_frames - oldest.encoder_frames
+	local encoder_skipped = newest.encoder_skipped - oldest.encoder_skipped
 	local output_frames = newest.output_frames - oldest.output_frames
 	local output_dropped = newest.output_dropped - oldest.output_dropped
-	if output_frames < 1 then
-		return
+	local render_rate = 0
+	if render_frames > 0 then
+		render_rate = render_lagged/render_frames
 	end
-	local output_rate = output_dropped/output_frames
-	--script_log(output_dropped .. "/" .. output_frames .. " " .. output_rate)
-	if output_rate > dropped_frame_alarm_level then
+	local encoder_rate = 0
+	if encoder_frames > 0 then
+		encoder_rate = encoder_skipped/encoder_frames
+	end
+	local output_rate = 0
+	if output_frames > 0 then
+		output_rate = output_dropped/output_frames
+	end
+	--script_log(render_lagged .. "/" .. render_frames .. " " .. render_rate .. " : " .. lagged_frame_alarm_level)
+	--script_log(encoder_skipped .. "/" .. encoder_frames .. " " .. encoder_rate .. " : " .. skipped_frame_alarm_level)
+	--script_log(output_dropped .. "/" .. output_frames .. " " .. output_rate .. " : " .. dropped_frame_alarm_level)
+	if render_rate > lagged_frame_alarm_level
+		or encoder_rate > skipped_frame_alarm_level
+		or output_rate > dropped_frame_alarm_level then
 		if not alarm_active then
 			play_alarm()
 			alarm_active = true
@@ -267,8 +285,14 @@ function script_properties()
 	local ss = obs.obs_properties_add_int(props, "sample_seconds", "Sample Seconds", 1, 300, 5) 
 	obs.obs_property_set_long_description(ss, "Period during which the alarm level is checked.")
 
-	local al = obs.obs_properties_add_int(props, "dropped_frame_alarm_level", "Dropped Frame Alarm Level", 0, 100, 5)
-	obs.obs_property_set_long_description(al, "Percentage of dropped frames in sample period which should trigger the alarm.")
+	local lfal = obs.obs_properties_add_int(props, "lagged_frame_alarm_level", "Rendering: Lagged Frame Alarm Level", 0, 100, 5)
+	obs.obs_property_set_long_description(lfal, "Percentage of frames missed due to rendering lag in sample period which should trigger the alarm.")
+
+	local sfal = obs.obs_properties_add_int(props, "skipped_frame_alarm_level", "Encoding: Skipped Frame Alarm Level", 0, 100, 5)
+	obs.obs_property_set_long_description(sfal, "Percentage of frames missed due to encoding lag in sample period which should trigger the alarm.")
+
+	local dfal = obs.obs_properties_add_int(props, "dropped_frame_alarm_level", "Network: Dropped Frame Alarm Level", 0, 100, 5)
+	obs.obs_property_set_long_description(dfal, "Percentage of frames missed due to output (network) errors in sample period which should trigger the alarm.")
 
 	local p = obs.obs_properties_add_list(props, "alarm_source", "Alarm Media Source", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
 	local sources = obs.obs_enum_sources()
@@ -297,6 +321,8 @@ function script_defaults(settings)
 	obs.obs_data_set_default_string(settings, "mode", "live")
 	obs.obs_data_set_default_string(settings, "output_mode", "simple_stream")
 	obs.obs_data_set_default_int(settings, "sample_seconds", 60)
+	obs.obs_data_set_default_int(settings, "lagged_frame_alarm_level", 20)
+	obs.obs_data_set_default_int(settings, "skipped_frame_alarm_level", 20)
 	obs.obs_data_set_default_int(settings, "dropped_frame_alarm_level", 20)
 	obs.obs_data_set_default_string(settings, "alarm_source", "")
 end
@@ -319,6 +345,8 @@ function script_update(settings)
 	end
 
 	sample_seconds = obs.obs_data_get_int(settings, "sample_seconds")
+	lagged_frame_alarm_level = obs.obs_data_get_int(settings, "lagged_frame_alarm_level") / 100
+	skipped_frame_alarm_level = obs.obs_data_get_int(settings, "skipped_frame_alarm_level") / 100
 	dropped_frame_alarm_level = obs.obs_data_get_int(settings, "dropped_frame_alarm_level") / 100
 	alarm_source = obs.obs_data_get_string(settings, "alarm_source")
 end
