@@ -28,19 +28,30 @@ local has_hooked_output = false
 
 local fake_frames = 0
 local fake_dropped = 0
+local fake_lagged = 0
 
 function update_frames()
+	local render_frames = 0
+	local render_lagged = 0
+
 	local output_frames = 0
 	local output_dropped = 0
 	local output_congestion = 0.0
 
 	if mode == "test" then
 		fake_frames = fake_frames + math.random(19,21)
+
+		render_frames = fake_frames
+		fake_lagged = fake_lagged + math.random(0, 20)
+		render_lagged = fake_lagged
+
 		output_frames = fake_frames
 		fake_dropped = fake_dropped + math.random(0, 20)
 		output_dropped = fake_dropped
 		output_congestion = math.random()
 	else
+		render_frames = obs.obs_get_total_frames()
+		render_lagged = obs.obs_get_lagged_frames()
 		local output = obs.obs_get_output_by_name(output_mode)
 		-- output will be nil when not actually streaming
 		if output ~= nil then
@@ -55,7 +66,8 @@ function update_frames()
 		end
 	end
 
-	--script_log(dropped .. "/" .. frames)
+	--script_log("render" .. render_lagged .. "/" .. render_frames)
+	--script_log("output" .. output_dropped .. "/" .. output_frames)
 
 	table.insert(frame_history, 1,
 		{
