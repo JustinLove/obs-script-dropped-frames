@@ -253,13 +253,15 @@ end
 
 -- A function named script_description returns the description shown to
 -- the user
-local description = [[Play an alarm if you start dropping frames
+local description = [[Play an alarm if you start losing frames due to rendering, encoding, or network output.
 
 Add a media source for the alarm. A suitable sound file is provided with the script. Open Advanced Audio Properties for the source and change Audio Monitoring to Monitor Only (mute output).
 
 Add a copy of the alarm source to every scene where you want to hear it.
 
-A custom source is available for drawing a dropped frame graph in the sample period. It can be added to the source panel. You may want to hide it and use a windowed projector to view the graph yourself. Yellow shows congestion, red shows fraction of dropped frames.
+A custom source is available for drawing a dropped frame graph in the sample period. It can be added to the source panel. You may want to hide it and use a windowed projector to view the graph yourself.
+
+Source has settings for color of each layer - Rendering Lag (default purple), Encoding Lag (default orange), Dropped Frames (default yellow), and Congestion (default green).
 ]]
 function script_description()
 	return description
@@ -376,10 +378,10 @@ end
 
 source_def.create = function(source, settings)
 	return {
-		lagged_color = 0xccff00ff,
-		skipped_color = 0xcc00ffff,
-		dropped_color = 0xcc0000ff,
-		congestion_color = 0xcc00ff00,
+		lagged_color = 0xcc5015bd,
+		skipped_color = 0xcc027fe9,
+		dropped_color = 0xcc00f8ca,
+		congestion_color = 0xcc0f9b8a,
 	}
 end
 
@@ -387,10 +389,10 @@ source_def.destroy = function(data)
 end
 
 source_def.get_defaults = function(settings)
-	obs.obs_data_set_default_int(settings, "lagged_color", 0xccff00ff)
-	obs.obs_data_set_default_int(settings, "skipped_color", 0xcc00ffff)
-	obs.obs_data_set_default_int(settings, "dropped_color", 0xcc0000ff)
-	obs.obs_data_set_default_int(settings, "congestion_color", 0xcc00ff00)
+	obs.obs_data_set_default_int(settings, "lagged_color", 0xcc5015bd)
+	obs.obs_data_set_default_int(settings, "skipped_color", 0xcc027fe9)
+	obs.obs_data_set_default_int(settings, "dropped_color", 0xcc00f8ca)
+	obs.obs_data_set_default_int(settings, "congestion_color", 0xcc0f9b8a)
 end
 
 source_def.get_properties = function(data)

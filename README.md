@@ -1,6 +1,6 @@
 # OBS Dropped Frame Alarm
 
-[OBS Lua Script](https://obsproject.com/docs/scripting.html) which plays a audio alarm (media source) when [OBS Studio](https://obsproject.com/) dropped frames are detected, and draws a graph of recent dropped frames.
+[OBS Lua Script](https://obsproject.com/docs/scripting.html) which plays a audio alarm (media source) when [OBS Studio](https://obsproject.com/) rendering, encoding or network lag is detected, and draws a graph of recent dropped frames.
 
 ## Requirements
 
@@ -18,8 +18,12 @@ Add a copy of the alarm source to every scene where you want to hear it.
 
 You may configure the sample window for alarms, as well as the percent of dropped frames to alarm at.
 
-A custom source is available for drawing a dropped frame graph in the sample period. It can be added to the source panel. You may want to hide it and use a windowed projector to view the graph yourself. Yellow shows congestion, red shows fraction of dropped frames.
+A custom source is available for drawing a dropped frame graph in the sample period. It can be added to the source panel. You may want to hide it and use a windowed projector to view the graph yourself.
+
+Source has settings for color of each layer - Rendering Lag (default purple), Encoding Lag (default orange), Dropped Frames (default yellow), and Congestion (default green).
 
 ## Credits
 
 Alert sounds: [`pup_alert.mp3`](https://freesound.org/people/willy_ineedthatapp_com/sounds/167337/) by `willy_ineedthatapp_com`
+Default Colors: [(?"?)](http://www.colourlovers.com/palette/848743/(_%E2%80%9D_)) by sugar!
+
