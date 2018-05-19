@@ -2,7 +2,7 @@ obs = obslua
 bit = require("bit")
 
 function script_log(message)
-	if false then
+	if true then
 		obs.script_log(obs.LOG_INFO, message)
 	end
 end
@@ -19,7 +19,7 @@ local graph_margin = 0
 local mode = "live"
 local output_mode = "simple_stream"
 local sample_seconds = 60
-local alarm_level = 0.2
+local dropped_frame_alarm_level = 0.2
 local alarm_source = ""
 
 local frame_history = {}
@@ -82,7 +82,7 @@ function check_alarm()
 	end
 	local rate = dropped/frames
 	--script_log(dropped .. "/" .. frames .. " " .. rate)
-	if rate > alarm_level then
+	if rate > dropped_frame_alarm_level then
 		if not alarm_active then
 			play_alarm()
 			alarm_active = true
@@ -97,6 +97,7 @@ function check_alarm()
 end
 
 function activate_alarm()
+	script_log("alarm")
 	set_alarm_visible(true)
 	obs.timer_remove(activate_alarm)
 end
@@ -234,7 +235,7 @@ function script_properties()
 	local ss = obs.obs_properties_add_int(props, "sample_seconds", "Sample Seconds", 1, 300, 5) 
 	obs.obs_property_set_long_description(ss, "Period during which the alarm level is checked.")
 
-	local al = obs.obs_properties_add_int(props, "alarm_level", "Alarm Level", 0, 100, 5)
+	local al = obs.obs_properties_add_int(props, "dropped_frame_alarm_level", "Dropped Frame Alarm Level", 0, 100, 5)
 	obs.obs_property_set_long_description(al, "Percentage of dropped frames in sample period which should trigger the alarm.")
 
 	local p = obs.obs_properties_add_list(props, "alarm_source", "Alarm Media Source", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
@@ -264,7 +265,7 @@ function script_defaults(settings)
 	obs.obs_data_set_default_string(settings, "mode", "live")
 	obs.obs_data_set_default_string(settings, "output_mode", "simple_stream")
 	obs.obs_data_set_default_int(settings, "sample_seconds", 60)
-	obs.obs_data_set_default_int(settings, "alarm_level", 20)
+	obs.obs_data_set_default_int(settings, "dropped_frame_alarm_level", 20)
 	obs.obs_data_set_default_string(settings, "alarm_source", "")
 end
 
@@ -286,7 +287,7 @@ function script_update(settings)
 	end
 
 	sample_seconds = obs.obs_data_get_int(settings, "sample_seconds")
-	alarm_level = obs.obs_data_get_int(settings, "alarm_level") / 100
+	dropped_frame_alarm_level = obs.obs_data_get_int(settings, "dropped_frame_alarm_level") / 100
 	alarm_source = obs.obs_data_get_string(settings, "alarm_source")
 end
 
