@@ -381,28 +381,6 @@ end
 source_def.destroy = function(data)
 end
 
-function fill(color)
-	local effect_solid = obs.obs_get_base_effect(obs.OBS_EFFECT_SOLID)
-	local color_param = obs.gs_effect_get_param_by_name(effect_solid, "color");
-
-	obs.gs_effect_set_color(color_param, color)
-
-	while obs.gs_effect_loop(effect_solid, "Solid") do
-		obs.gs_draw(obs.GS_TRISTRIP, 0, 0)
-	end
-end
-
-function stroke(color)
-	local effect_solid = obs.obs_get_base_effect(obs.OBS_EFFECT_SOLID)
-	local color_param = obs.gs_effect_get_param_by_name(effect_solid, "color");
-
-	obs.gs_effect_set_color(color_param, color)
-
-	while obs.gs_effect_loop(effect_solid, "Solid") do
-		obs.gs_draw(obs.GS_LINESTRIP, 0, 0)
-	end
-end
-
 function area_chart(value, total, effect_solid)
 	obs.gs_matrix_push()
 	local frames = extract_series(frame_history, total)
