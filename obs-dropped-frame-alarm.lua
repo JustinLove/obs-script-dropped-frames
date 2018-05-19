@@ -30,23 +30,23 @@ local fake_frames = 0
 local fake_dropped = 0
 
 function update_frames()
-	local frames = 0
-	local dropped = 0
-	local congestion = 0.0
+	local output_frames = 0
+	local output_dropped = 0
+	local output_congestion = 0.0
 
 	if mode == "test" then
 		fake_frames = fake_frames + math.random(19,21)
-		frames = fake_frames
+		output_frames = fake_frames
 		fake_dropped = fake_dropped + math.random(0, 20)
-		dropped = fake_dropped
-		congestion = math.random()
+		output_dropped = fake_dropped
+		output_congestion = math.random()
 	else
 		local output = obs.obs_get_output_by_name(output_mode)
 		-- output will be nil when not actually streaming
 		if output ~= nil then
-			frames = obs.obs_output_get_total_frames(output)
-			dropped = obs.obs_output_get_frames_dropped(output)
-			congestion = obs.obs_output_get_congestion(output)
+			output_frames = obs.obs_output_get_total_frames(output)
+			output_dropped = obs.obs_output_get_frames_dropped(output)
+			output_congestion = obs.obs_output_get_congestion(output)
 			obs.obs_output_release(output)
 
 			if has_hooked_output == false then
@@ -58,7 +58,11 @@ function update_frames()
 	--script_log(dropped .. "/" .. frames)
 
 	table.insert(frame_history, 1,
-		{frames = frames, dropped = dropped, congestion = congestion})
+		{
+			output_frames = output_frames,
+			output_dropped = output_dropped,
+			output_congestion = output_congestion
+		})
 
 	local sample_size = (sample_seconds * 1000 / sample_rate) + 1
 	-- + 1 so that we get n differences
@@ -75,14 +79,14 @@ function check_alarm()
 	end
 	local newest = frame_history[1]
 	local oldest = frame_history[#frame_history]
-	local frames = newest.frames - oldest.frames
-	local dropped = newest.dropped - oldest.dropped
-	if frames < 1 then
+	local output_frames = newest.output_frames - oldest.output_frames
+	local output_dropped = newest.output_dropped - oldest.output_dropped
+	if output_frames < 1 then
 		return
 	end
-	local rate = dropped/frames
-	--script_log(dropped .. "/" .. frames .. " " .. rate)
-	if rate > dropped_frame_alarm_level then
+	local output_rate = output_dropped/output_frames
+	--script_log(output_dropped .. "/" .. output_frames .. " " .. output_rate)
+	if output_rate > dropped_frame_alarm_level then
 		if not alarm_active then
 			play_alarm()
 			alarm_active = true
@@ -358,17 +362,17 @@ source_def.video_render = function(data, effect)
 	obs.gs_matrix_scale3f(1, -1, 1)
 
 	if #frame_history > 1 then
-		local frames = extract_series(frame_history, "frames")
+		local output_frames = extract_series(frame_history, "output_frames")
 
 		obs.gs_matrix_push()
 		obs.gs_matrix_translate3f(1, 0, 0)
 		obs.gs_matrix_scale3f(-1, 1, 1)
-		obs.gs_matrix_scale3f(1/(#frames-1), 1, 1)
+		obs.gs_matrix_scale3f(1/(#output_frames-1), 1, 1)
 
 		obs.gs_render_start(true)
 
 		for i,h in ipairs(frame_history) do
-			obs.gs_vertex2f(i-1, h.congestion)
+			obs.gs_vertex2f(i-1, h.output_congestion)
 			obs.gs_vertex2f(i-1, 0)
 		end
 
@@ -378,13 +382,13 @@ source_def.video_render = function(data, effect)
 		end
 
 		obs.gs_matrix_push()
-		obs.gs_matrix_scale3f(1, 1/table_max(frames), 1)
+		obs.gs_matrix_scale3f(1, 1/table_max(output_frames), 1)
 
-		local dropped = extract_series(frame_history, "dropped")
+		local output_dropped = extract_series(frame_history, "output_dropped")
 
 		obs.gs_render_start(true)
 
-		for i,d in ipairs(dropped) do
+		for i,d in ipairs(output_dropped) do
 			obs.gs_vertex2f(i-1, d)
 			obs.gs_vertex2f(i-1, 0)
 		end
