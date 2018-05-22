@@ -302,7 +302,7 @@ function script_properties()
 	local sources = obs.obs_enum_sources()
 	if sources ~= nil then
 		for _, source in ipairs(sources) do
-			source_id = obs.obs_source_get_id(source)
+			local source_id = obs.obs_source_get_id(source)
 			if source_id == "ffmpeg_source" then
 				local name = obs.obs_source_get_name(source)
 				obs.obs_property_list_add_string(p, name, name)
