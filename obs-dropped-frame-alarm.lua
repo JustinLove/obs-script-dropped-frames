@@ -1,15 +1,11 @@
---require("strict")
-obs = obslua
-bit = require("bit")
+-- luacheck: allow defined top
+local obs = obslua
+local bit = require("bit")
 
 function script_log(message)
 	if true then
 		obs.script_log(obs.LOG_INFO, message)
 	end
-end
-
-function script_error(message)
-	obs.script_log(obs.LOG_ERROR, message)
 end
 
 ffi = require("ffi")
@@ -51,8 +47,11 @@ local fake_skipped = 0
 local fake_dropped = 0
 
 function update_frames()
+	-- luacheck bug?
+	-- luacheck: push no unused
 	local render_frames = 0
 	local render_lagged = 0
+	-- luacheck: pop
 
 	local encoder_frames = 0
 	local encoder_skipped = 0
@@ -205,7 +204,7 @@ function hide_all_alarms()
 	end
 end
 
-function output_stop(calldata)
+function output_stop(calldata) -- luacheck: no unused args
 	hide_all_alarms()
 end
 
@@ -248,13 +247,14 @@ function table_max(table)
 	return best
 end
 
-function test_alarm(props, p, set)
+function test_alarm(props, p, set) -- luacheck: no unused args
 	play_alarm()
 	return true
 end
 
 -- A function named script_description returns the description shown to
 -- the user
+-- luacheck: push no max line length
 local description = [[Play an alarm if you start losing frames due to rendering, encoding, or network output.
 
 Add a media source for the alarm. A suitable sound file is provided with the script. Open Advanced Audio Properties for the source and change Audio Monitoring to Monitor Only (mute output).
@@ -265,6 +265,7 @@ A custom source is available for drawing a dropped frame graph in the sample per
 
 Source has settings for color of each layer - Rendering Lag (default purple), Encoding Lag (default orange), Dropped Frames (default yellow), and Congestion (default green).
 ]]
+-- luacheck: pop
 function script_description()
 	return description
 end
@@ -276,29 +277,42 @@ function script_properties()
 
 	local props = obs.obs_properties_create()
 
-	local m = obs.obs_properties_add_list(props, "mode", "Mode", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
+	local m = obs.obs_properties_add_list(props,
+		"mode", "Mode", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
 	obs.obs_property_list_add_string(m, "Live", "live")
 	obs.obs_property_list_add_string(m, "Test", "test")
-	obs.obs_property_set_long_description(m, "Test generates fake frame counts.")
+	obs.obs_property_set_long_description(m,
+		"Test generates fake frame counts.")
 
-	local o = obs.obs_properties_add_list(props, "output_mode", "Output Mode", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
+	local o = obs.obs_properties_add_list(props,
+		"output_mode", "Output Mode", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
 	obs.obs_property_list_add_string(o, "Simple", "simple_stream")
 	obs.obs_property_list_add_string(o, "Advanced", "adv_stream")
-	obs.obs_property_set_long_description(o, "Must match the OBS streaming mode you are using.")
+	obs.obs_property_set_long_description(o,
+		"Must match the OBS streaming mode you are using.")
 
-	local ss = obs.obs_properties_add_int(props, "sample_seconds", "Sample Seconds", 1, 300, 5) 
-	obs.obs_property_set_long_description(ss, "Period during which the alarm level is checked.")
+	local ss = obs.obs_properties_add_int(props,
+		"sample_seconds", "Sample Seconds", 1, 300, 5)
+	obs.obs_property_set_long_description(ss,
+		"Period during which the alarm level is checked.")
 
-	local lfal = obs.obs_properties_add_int(props, "lagged_frame_alarm_level", "Rendering: Lagged Frame Alarm Level", 0, 100, 5)
-	obs.obs_property_set_long_description(lfal, "Percentage of frames missed due to rendering lag in sample period which should trigger the alarm.")
+	local lfal = obs.obs_properties_add_int(props,
+		"lagged_frame_alarm_level", "Rendering: Lagged Frame Alarm Level", 0, 100, 5)
+	obs.obs_property_set_long_description(lfal,
+		"Percentage of frames missed due to rendering lag in sample period which should trigger the alarm.")
 
-	local sfal = obs.obs_properties_add_int(props, "skipped_frame_alarm_level", "Encoding: Skipped Frame Alarm Level", 0, 100, 5)
-	obs.obs_property_set_long_description(sfal, "Percentage of frames missed due to encoding lag in sample period which should trigger the alarm.")
+	local sfal = obs.obs_properties_add_int(props,
+		"skipped_frame_alarm_level", "Encoding: Skipped Frame Alarm Level", 0, 100, 5)
+	obs.obs_property_set_long_description(sfal,
+		"Percentage of frames missed due to encoding lag in sample period which should trigger the alarm.")
 
-	local dfal = obs.obs_properties_add_int(props, "dropped_frame_alarm_level", "Network: Dropped Frame Alarm Level", 0, 100, 5)
-	obs.obs_property_set_long_description(dfal, "Percentage of frames missed due to output (network) errors in sample period which should trigger the alarm.")
+	local dfal = obs.obs_properties_add_int(props,
+		"dropped_frame_alarm_level", "Network: Dropped Frame Alarm Level", 0, 100, 5)
+	obs.obs_property_set_long_description(dfal,
+		"Percentage of frames missed due to output (network) errors in sample period which should trigger the alarm.")
 
-	local p = obs.obs_properties_add_list(props, "alarm_source", "Alarm Media Source", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
+	local p = obs.obs_properties_add_list(props,
+		"alarm_source", "Alarm Media Source", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
 	local sources = obs.obs_enum_sources()
 	if sources ~= nil then
 		for _, source in ipairs(sources) do
@@ -310,13 +324,18 @@ function script_properties()
 		end
 	end
 	obs.source_list_release(sources)
-	obs.obs_property_set_long_description(p, "See above for how to create an appropriate media source.")
+	obs.obs_property_set_long_description(p,
+		"See above for how to create an appropriate media source.")
 
-	local rep = obs.obs_properties_add_int(props, "alarm_repeat", "Alarm Repeat Seconds", 0, 60*60, 5)
-	obs.obs_property_set_long_description(dfal, "Number of seconds before repeating alarm if condition remains true.")
+	local rep = obs.obs_properties_add_int(props,
+		"alarm_repeat", "Alarm Repeat Seconds", 0, 60*60, 5)
+	obs.obs_property_set_long_description(rep,
+		"Number of seconds before repeating alarm if condition remains true.")
 
-	local ref = obs.obs_properties_add_button(props, "test_alarm", "Test Alarm", test_alarm)
-	obs.obs_property_set_long_description(ref, "Test activating selected media sources")
+	local ref = obs.obs_properties_add_button(props,
+		"test_alarm", "Test Alarm", test_alarm)
+	obs.obs_property_set_long_description(ref,
+		"Test activating selected media sources")
 
 	return props
 end
@@ -365,7 +384,7 @@ function script_update(settings)
 end
 
 -- a function named script_load will be called on startup
-function script_load(settings)
+function script_load(settings) -- luacheck: no unused args
 	script_log("load")
 	obs.timer_add(update_frames, sample_rate)
 	hook_output()
@@ -387,7 +406,7 @@ source_def.get_name = function()
 	return "Dropped Frame Graph"
 end
 
-source_def.create = function(source, settings)
+source_def.create = function(source, settings) -- luacheck: no unused args
 	return {
 		lagged_color = 0xcc5015bd,
 		skipped_color = 0xcc027fe9,
@@ -396,7 +415,7 @@ source_def.create = function(source, settings)
 	}
 end
 
-source_def.destroy = function(data)
+source_def.destroy = function(data) -- luacheck: no unused args
 end
 
 source_def.get_defaults = function(settings)
@@ -406,7 +425,7 @@ source_def.get_defaults = function(settings)
 	obs.obs_data_set_default_int(settings, "congestion_color", 0xcc0f9b8a)
 end
 
-source_def.get_properties = function(data)
+source_def.get_properties = function(data) -- luacheck: no unused args
 	local props = obs.obs_properties_create()
 
 	local lc = obs.obs_properties_add_color(props, "lagged_color", "Rendering Lagged Color")
@@ -460,7 +479,7 @@ function area_chart(value, total, color, color_param, effect_solid)
 end
 
 
-source_def.video_render = function(data, effect)
+source_def.video_render = function(data, effect) -- luacheck: no unused args
 	obs.gs_blend_state_push()
 	obs.gs_reset_blend_state()
 
@@ -507,11 +526,11 @@ source_def.video_render = function(data, effect)
 	obs.gs_blend_state_pop()
 end
 
-source_def.get_width = function(data)
+source_def.get_width = function(data) -- luacheck: no unused args
 	return graph_width
 end
 
-source_def.get_height = function(data)
+source_def.get_height = function(data) -- luacheck: no unused args
 	return graph_height
 end
 
