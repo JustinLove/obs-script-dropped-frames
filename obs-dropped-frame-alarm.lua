@@ -1,3 +1,4 @@
+--require("strict")
 obs = obslua
 bit = require("bit")
 
@@ -338,7 +339,6 @@ end
 -- A function named script_update will be called when settings are changed
 function script_update(settings)
 	script_log("update")
-	my_settings = settings
 
 	mode = obs.obs_data_get_string(settings, "mode")
 
