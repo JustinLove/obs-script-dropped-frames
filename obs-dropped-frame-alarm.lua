@@ -1,14 +1,13 @@
--- luacheck: allow defined top
 local obs = obslua
 local bit = require("bit")
 
-function script_log(message)
+local function script_log(message)
 	if true then
 		obs.script_log(obs.LOG_INFO, message)
 	end
 end
 
-ffi = require("ffi")
+local ffi = require("ffi")
 
 ffi.cdef[[
 
@@ -46,7 +45,115 @@ local fake_lagged = 0
 local fake_skipped = 0
 local fake_dropped = 0
 
-function update_frames()
+local function hide_all_alarms()
+	local names = obs.obs_frontend_get_scene_names()
+	for _,name in ipairs(names) do
+		local source = obs.obs_get_source_by_name(name)
+		local scene = obs.obs_scene_from_source(source)
+		if scene ~= nil then
+			local item = obs.obs_scene_find_source(scene, alarm_source)
+			if item ~= nil then
+				obs.obs_sceneitem_set_visible(item, false)
+			end
+		end
+		obs.obs_source_release(source)
+	end
+end
+
+local function output_stop(calldata) -- luacheck: no unused args
+	hide_all_alarms()
+end
+
+local function hook_output()
+	local output = obs.obs_get_output_by_name(output_mode)
+	if output ~= nil then
+		local handler = obs.obs_output_get_signal_handler(output)
+		if handler ~= nil then
+			has_hooked_output = true
+			obs.signal_handler_connect(handler, "stop", output_stop)
+		end
+		obs.obs_output_release(output)
+	end
+end
+
+local function unhook_output()
+	local output = obs.obs_get_output_by_name(output_mode)
+	if output ~= nil then
+		local handler = obs.obs_output_get_signal_handler(output)
+		if handler ~= nil then
+			obs.signal_handler_disconnect(handler, "stop", output_stop)
+		end
+		obs.obs_output_release(output)
+	end
+end
+
+local function set_alarm_visible(visible)
+	if alarm_source ~= nil then
+		local current_source = obs.obs_frontend_get_current_scene()
+		local current_scene = obs.obs_scene_from_source(current_source)
+		local item = obs.obs_scene_find_source(current_scene, alarm_source)
+		if item ~= nil then
+			obs.obs_sceneitem_set_visible(item, visible)
+		end
+		obs.obs_source_release(current_source)
+	end
+end
+
+local function activate_alarm()
+	script_log("alarm")
+	set_alarm_visible(true)
+	obs.timer_remove(activate_alarm)
+end
+
+local function play_alarm()
+	set_alarm_visible(false)
+	obs.timer_add(activate_alarm, 500)
+end
+
+local function check_alarm()
+	if #frame_history < 2 then
+		return
+	end
+	local newest = frame_history[1]
+	local oldest = frame_history[#frame_history]
+	local render_frames = newest.render_frames - oldest.render_frames
+	local render_lagged = newest.render_lagged - oldest.render_lagged
+	local encoder_frames = newest.encoder_frames - oldest.encoder_frames
+	local encoder_skipped = newest.encoder_skipped - oldest.encoder_skipped
+	local output_frames = newest.output_frames - oldest.output_frames
+	local output_dropped = newest.output_dropped - oldest.output_dropped
+	local render_rate = 0
+	if render_frames > 0 then
+		render_rate = render_lagged/render_frames
+	end
+	local encoder_rate = 0
+	if encoder_frames > 0 then
+		encoder_rate = encoder_skipped/encoder_frames
+	end
+	local output_rate = 0
+	if output_frames > 0 then
+		output_rate = output_dropped/output_frames
+	end
+	--script_log(render_lagged .. "/" .. render_frames .. " " .. render_rate .. " : " .. lagged_frame_alarm_level)
+	--script_log(encoder_skipped .. "/" .. encoder_frames .. " " .. encoder_rate .. " : " .. skipped_frame_alarm_level)
+	--script_log(output_dropped .. "/" .. output_frames .. " " .. output_rate .. " : " .. dropped_frame_alarm_level)
+	if render_rate > lagged_frame_alarm_level
+		or encoder_rate > skipped_frame_alarm_level
+		or output_rate > dropped_frame_alarm_level then
+		if not alarm_active then
+			play_alarm()
+			alarm_active = true
+			obs.timer_add(play_alarm, alarm_repeat*1000)
+		end
+	else
+		if alarm_active then
+			alarm_active = false
+			obs.timer_remove(play_alarm)
+		end
+	end
+end
+
+local function update_frames()
 	-- luacheck bug?
 	-- luacheck: push no unused
 	local render_frames = 0
@@ -123,115 +230,7 @@ function update_frames()
 	check_alarm()
 end
 
-function check_alarm()
-	if #frame_history < 2 then
-		return
-	end
-	local newest = frame_history[1]
-	local oldest = frame_history[#frame_history]
-	local render_frames = newest.render_frames - oldest.render_frames
-	local render_lagged = newest.render_lagged - oldest.render_lagged
-	local encoder_frames = newest.encoder_frames - oldest.encoder_frames
-	local encoder_skipped = newest.encoder_skipped - oldest.encoder_skipped
-	local output_frames = newest.output_frames - oldest.output_frames
-	local output_dropped = newest.output_dropped - oldest.output_dropped
-	local render_rate = 0
-	if render_frames > 0 then
-		render_rate = render_lagged/render_frames
-	end
-	local encoder_rate = 0
-	if encoder_frames > 0 then
-		encoder_rate = encoder_skipped/encoder_frames
-	end
-	local output_rate = 0
-	if output_frames > 0 then
-		output_rate = output_dropped/output_frames
-	end
-	--script_log(render_lagged .. "/" .. render_frames .. " " .. render_rate .. " : " .. lagged_frame_alarm_level)
-	--script_log(encoder_skipped .. "/" .. encoder_frames .. " " .. encoder_rate .. " : " .. skipped_frame_alarm_level)
-	--script_log(output_dropped .. "/" .. output_frames .. " " .. output_rate .. " : " .. dropped_frame_alarm_level)
-	if render_rate > lagged_frame_alarm_level
-		or encoder_rate > skipped_frame_alarm_level
-		or output_rate > dropped_frame_alarm_level then
-		if not alarm_active then
-			play_alarm()
-			alarm_active = true
-			obs.timer_add(play_alarm, alarm_repeat*1000)
-		end
-	else
-		if alarm_active then
-			alarm_active = false
-			obs.timer_remove(play_alarm)
-		end
-	end
-end
-
-function activate_alarm()
-	script_log("alarm")
-	set_alarm_visible(true)
-	obs.timer_remove(activate_alarm)
-end
-
-function play_alarm()
-	set_alarm_visible(false)
-	obs.timer_add(activate_alarm, 500)
-end
-
-function set_alarm_visible(visible)
-	if alarm_source ~= nil then
-		local current_source = obs.obs_frontend_get_current_scene()
-		local current_scene = obs.obs_scene_from_source(current_source)
-		local item = obs.obs_scene_find_source(current_scene, alarm_source)
-		if item ~= nil then
-			obs.obs_sceneitem_set_visible(item, visible)
-		end
-		obs.obs_source_release(current_source)
-	end
-end
-
-function hide_all_alarms()
-	local names = obs.obs_frontend_get_scene_names()
-	for _,name in ipairs(names) do
-		local source = obs.obs_get_source_by_name(name)
-		local scene = obs.obs_scene_from_source(source)
-		if scene ~= nil then
-			local item = obs.obs_scene_find_source(scene, alarm_source)
-			if item ~= nil then
-				obs.obs_sceneitem_set_visible(item, false)
-			end
-		end
-		obs.obs_source_release(source)
-	end
-end
-
-function output_stop(calldata) -- luacheck: no unused args
-	hide_all_alarms()
-end
-
-function hook_output()
-	local output = obs.obs_get_output_by_name(output_mode)
-	if output ~= nil then
-		local handler = obs.obs_output_get_signal_handler(output)
-		if handler ~= nil then
-			has_hooked_output = true
-			obs.signal_handler_connect(handler, "stop", output_stop)
-		end
-		obs.obs_output_release(output)
-	end
-end
-
-function unhook_output()
-	local output = obs.obs_get_output_by_name(output_mode)
-	if output ~= nil then
-		local handler = obs.obs_output_get_signal_handler(output)
-		if handler ~= nil then
-			obs.signal_handler_disconnect(handler, "stop", output_stop)
-		end
-		obs.obs_output_release(output)
-	end
-end
-
-function extract_series(table, attribute)
+local function extract_series(table, attribute)
 	local series = {}
 	for i = 1,#table-1 do
 		series[i] = table[i][attribute] - table[i+1][attribute]
@@ -239,7 +238,7 @@ function extract_series(table, attribute)
 	return series
 end
 
-function table_max(table)
+local function table_max(table)
 	local best = table[1] or 0
 	for _,v in ipairs(table) do
 		best = math.max(best, v)
@@ -247,7 +246,7 @@ function table_max(table)
 	return best
 end
 
-function test_alarm(props, p, set) -- luacheck: no unused args
+local function test_alarm(props, p, set) -- luacheck: no unused args
 	play_alarm()
 	return true
 end
@@ -398,7 +397,7 @@ function script_unload()
 	--obs.timer_remove(update_frames)
 end
 
-source_def = {}
+local source_def = {}
 source_def.id = "lua_dropped_frame_graph_source"
 source_def.output_flags = bit.bor(obs.OBS_SOURCE_VIDEO, obs.OBS_SOURCE_CUSTOM_DRAW)
 
@@ -450,7 +449,7 @@ source_def.update = function(data, settings)
 	data.congestion_color = obs.obs_data_get_int(settings, "congestion_color")
 end
 
-function area_chart(value, total, color, color_param, effect_solid)
+local function area_chart(value, total, color, color_param, effect_solid)
 	if bit.band(color, 0xff000000) == 0 then
 		return
 	end

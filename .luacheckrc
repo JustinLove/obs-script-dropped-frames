@@ -1,4 +1,3 @@
---allow_defined_top = true
 stds.obs_script = {
   read_globals = {
     "obslua",
@@ -13,5 +12,3 @@ ignore = {
   "script_load",
   "script_unload",
 }
-
-
