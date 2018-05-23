@@ -14,9 +14,13 @@ video_t *obs_get_video(void);
 
 ]]
 
---local obsffi = ffi.load("obs.0.dylib") -- OS X
-local obsffi = ffi.load("obs") -- Windows
--- Linux?
+local obsffi
+if ffi.os == "OSX" then
+	obsffi = ffi.load("obs.0.dylib") -- OS X
+else
+	obsffi = ffi.load("obs") -- Windows
+	-- Linux?
+end
 
 local function script_log(message) -- luacheck: no unused args
 	-- "unreachable code"

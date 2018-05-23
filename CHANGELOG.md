@@ -1,5 +1,9 @@
 # Dropped Frame Alarm
 
+## 2.1.0
+
+- OSX no longer requires manual scrit modification
+
 ## 2.0.0
 
 - Add Rendering and Encoding lagged frames.
