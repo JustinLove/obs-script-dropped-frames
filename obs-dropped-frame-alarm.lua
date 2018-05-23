@@ -18,10 +18,13 @@ video_t *obs_get_video(void);
 local obsffi = ffi.load("obs") -- Windows
 -- Linux?
 
-local function script_log(message)
+local function script_log(message) -- luacheck: no unused args
+	-- "unreachable code"
+	-- luacheck: push ignore
 	if false then
 		obs.script_log(obs.LOG_INFO, message)
 	end
+	-- luacheck: pop
 end
 
 local sample_rate = 1000
