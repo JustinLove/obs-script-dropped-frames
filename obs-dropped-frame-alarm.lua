@@ -19,7 +19,7 @@ local obsffi = ffi.load("obs") -- Windows
 -- Linux?
 
 local function script_log(message)
-	if true then
+	if false then
 		obs.script_log(obs.LOG_INFO, message)
 	end
 end
