@@ -1,12 +1,6 @@
 local obs = obslua
 local bit = require("bit")
 
-local function script_log(message)
-	if true then
-		obs.script_log(obs.LOG_INFO, message)
-	end
-end
-
 local ffi = require("ffi")
 
 ffi.cdef[[
@@ -20,7 +14,15 @@ video_t *obs_get_video(void);
 
 ]]
 
-local obsffi = ffi.load("obs")
+--local obsffi = ffi.load("obs.0.dylib") -- OS X
+local obsffi = ffi.load("obs") -- Windows
+-- Linux?
+
+local function script_log(message)
+	if true then
+		obs.script_log(obs.LOG_INFO, message)
+	end
+end
 
 local sample_rate = 1000
 local graph_width = 600
@@ -186,10 +188,12 @@ local function update_frames()
 		render_frames = obs.obs_get_total_frames()
 		render_lagged = obs.obs_get_lagged_frames()
 
-		local video = obsffi.obs_get_video()
-		if video ~= nil then
-			encoder_frames = obsffi.video_output_get_total_frames(video)
-			encoder_skipped = obsffi.video_output_get_skipped_frames(video)
+		if obsffi ~= nil then
+			local video = obsffi.obs_get_video()
+			if video ~= nil then
+				encoder_frames = obsffi.video_output_get_total_frames(video)
+				encoder_skipped = obsffi.video_output_get_skipped_frames(video)
+			end
 		end
 
 		local output = obs.obs_get_output_by_name(output_mode)

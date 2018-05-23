@@ -22,6 +22,13 @@ A custom source is available for drawing a dropped frame graph in the sample per
 
 Source has settings for color of each layer - Rendering Lag (default purple), Encoding Lag (default orange), Dropped Frames (default yellow), and Congestion (default green).
 
+### OS X
+
+The script must be edited to correctly load. Swap the `--` comment characters on the following lines near the top of the script.
+
+    --local obsffi = ffi.load("obs.0.dylib") -- OS X
+    local obsffi = ffi.load("obs") -- Windows
+
 ## Credits
 
 Alert sounds: [`pup_alert.mp3`](https://freesound.org/people/willy_ineedthatapp_com/sounds/167337/) by `willy_ineedthatapp_com`
