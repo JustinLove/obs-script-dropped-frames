@@ -2,7 +2,7 @@
 
 ## 2.1.0
 
-- OSX no longer requires manual scrit modification
+- OSX no longer requires manual script modification
 
 ## 2.0.0
 
